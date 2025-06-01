@@ -130,13 +130,21 @@
                         <span class="fishloot-name">FISHLOOT</span>
                     </a>
 
-                    <div class="fishloot-search-container">
-                        <input type="text" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" />
-                        <input type="text" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" />
-                        <button class="fishloot-search-button">
+					@* Thay đổi logo và tên ở đây *@
+                    @* <div class="fishloot-search-container"> *@
+                    @*     <input type="text" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" /> *@
+                    @*     <input type="text" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" /> *@
+                    @*     <button class="fishloot-search-button"> *@
+                    @*         <i class="fas fa-search"></i> *@
+                    @*     </button> *@
+                    @* </div> *@
+                    <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container">
+                        <input type="text" name="q" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" />
+                        <input type="text" name="location" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" />
+                        <button class="fishloot-search-button" type="submit">
                             <i class="fas fa-search"></i>
                         </button>
-                    </div>
+                    </form>
 
                     <div class="fishloot-nav-links">
                         <a href="#" class="fishloot-nav-link">Loot your business</a>

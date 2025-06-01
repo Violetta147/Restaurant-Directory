@@ -1,5 +1,5 @@
 ﻿using PBL3.Models;
-using PBL3.ViewModel;
+using PBL3.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

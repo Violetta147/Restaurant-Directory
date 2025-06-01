@@ -1,7 +1,7 @@
 ﻿// File: ViewModel/CreateUserViewModel.cs (hoặc Models/CreateUserViewModel.cs)
 using System.ComponentModel.DataAnnotations;
 
-namespace PBL3.ViewModel // Hoặc PBL3.Models
+namespace PBL3.ViewModels // Hoặc PBL3.Models
 {
     public class CreateUserViewModel // Hoặc giữ tên là User nếu bạn muốn
     {

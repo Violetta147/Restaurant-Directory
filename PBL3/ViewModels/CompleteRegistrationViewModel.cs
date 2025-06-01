@@ -4,7 +4,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using PBL3.Models; // Cho GenderType
 
-namespace PBL3.ViewModel // Hoặc PBL3.ViewModel
+namespace PBL3.ViewModels // Hoặc PBL3.ViewModel
 {
     public class CompleteRegistrationViewModel
     {

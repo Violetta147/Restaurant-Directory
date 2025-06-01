@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
-using PBL3.ViewModel;
+using PBL3.ViewModels;
 using PBL3.Models;
 
 namespace PBL3.Controllers

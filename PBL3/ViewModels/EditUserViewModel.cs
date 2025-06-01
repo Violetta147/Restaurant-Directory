@@ -1,7 +1,7 @@
 ﻿// File: ViewModel/EditUserViewModel.cs (hoặc Models/EditUserViewModel.cs)
 using System.ComponentModel.DataAnnotations;
 
-namespace PBL3.ViewModel // Hoặc PBL3.Models
+namespace PBL3.ViewModels // Hoặc PBL3.Models
 {
     public class EditUserViewModel
     {

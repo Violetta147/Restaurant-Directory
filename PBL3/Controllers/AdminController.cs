@@ -1,5 +1,5 @@
 ﻿using PBL3.Models;
-using PBL3.ViewModel; // Hoặc namespace chứa CreateUserViewModel của bạn
+using PBL3.ViewModels; // Hoặc namespace chứa CreateUserViewModel của bạn
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PBL3.Ultilities; // Namespace chứa EmailHelper/IEmailSender
