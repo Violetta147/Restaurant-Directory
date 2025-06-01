@@ -7,6 +7,11 @@ using PBL3.CustomPolicy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.Extensions.Options;
+using PBL3.Repositories.Interfaces;
+using PBL3.Repositories;
+using PBL3.Services.Interfaces;
+using PBL3.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -22,6 +27,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     ));
 builder.Services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+// Register repositories
+builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+
+// Register services
+builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+
+
 builder.Services.Configure<IdentityOptions>(options =>
 {
 

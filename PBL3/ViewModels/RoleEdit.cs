@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using PBL3.Models;
  
-namespace PBL3.ViewModel
+namespace PBL3.ViewModels
 {
     public class RoleEdit
     {

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
  
-namespace PBL3.ViewModel
+namespace PBL3.ViewModels
 {
     public class RoleModification
     {

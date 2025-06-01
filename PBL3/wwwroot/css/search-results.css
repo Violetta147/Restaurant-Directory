@@ -1,0 +1,82 @@
+﻿/* Yelp-style 3-column layout */
+#yelp-style-results-layout {
+    display: flex;
+    min-height: calc(100vh - 150px);
+}
+
+#filters-sidebar-frame {
+    width: 250px;
+    overflow-y: auto;
+    background-color: white;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#restaurant-results-frame {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.5rem;
+}
+
+#map-sidebar-frame {
+    width: 33%;
+    position: relative;
+    min-height: 600px;
+}
+
+#mapbox-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+
+#reload-map-button {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 8px 16px;
+    border-radius: 4px;
+    display: none;
+}
+
+.restaurant-item {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .restaurant-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+.restaurant-marker {
+    cursor: pointer;
+}
+
+.mapboxgl-popup-content {
+    padding: 15px;
+}
+
+/* Responsive layout */
+@media (max-width: 992px) {
+    #yelp-style-results-layout {
+        flex-direction: column;
+    }
+
+    #filters-sidebar-frame,
+    #map-sidebar-frame {
+        width: 100%;
+        height: 400px;
+    }
+
+    #map-sidebar-frame {
+        margin-top: 20px;
+        position: relative;
+    }
+}
