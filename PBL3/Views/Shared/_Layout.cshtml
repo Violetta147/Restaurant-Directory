@@ -10,115 +10,16 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="mapbox-token" content="@ViewData["MapboxToken"]" /> @* Ensure ViewData["MapboxToken"] is populated globally or by relevant actions *@
     <title>@ViewData["Title"] - PBL3</title>
     @* <script type="importmap"></script> *@ @* Thường không cần thiết với Bootstrap 5 và jQuery truyền thống *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nav-bar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/PBL3.styles.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/leaflet-maps.css" asp-append-version="true" />
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <style>
-        .fishloot-navbar {
-            background-color: #9FFFCB;
-            padding: 15px 0;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-        }
-
-        .fishloot-logo {
-            height: 36px;
-            margin-right: 5px;
-            margin-left: 5px;
-        }
-
-        .fishloot-search-container {
-            display: flex;
-            flex-grow: 1;
-            max-width: 900px;
-        }
-
-        .fishloot-search-input {
-            border-radius: 4px 0 0 4px;
-            border: 1px solid #7AE582;
-            padding: 8px 16px;
-            width: 45%;
-            font-size: 14px;
-        }
-
-        .fishloot-search-location {
-            border-radius: 0;
-            border: 1px solid #7AE582;
-            border-left: none;
-            padding: 8px 16px;
-            width: 55%;
-            font-size: 14px;
-        }
-
-        .fishloot-search-button {
-            background-color: #25A18E;
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            padding: 8px 16px;
-            cursor: pointer;
-        }
-
-        .fishloot-nav-links {
-            margin-left: 20px;
-            display: flex;
-            align-items: center;
-        }
-
-        .fishloot-nav-link {
-            color: #333;
-            margin: 0 12px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .fishloot-signup-button {
-            background-color: #25A18E;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-weight: bold;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-
-        .fishloot-login-button {
-            background-color: transparent;
-            color: #333;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-weight: bold;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-        .fishloot-name {
-            font-size: 1.0rem; /* adjust as needed */
-            font-weight: 600;
-            color: #004E64; /* match your theme */
-            white-space: nowrap;
-            line-height: 1;
-            margin-right: 5px;
-        }
-
-        /* Thêm style cho nút logout nếu cần */
-        .fishloot-logout-button {
-            background-color: transparent;
-            color: #333;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-weight: bold;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-    </style>
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <header>
@@ -131,16 +32,14 @@
                     </a>
 
 					@* Thay đổi logo và tên ở đây *@
-                    @* <div class="fishloot-search-container"> *@
-                    @*     <input type="text" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" /> *@
-                    @*     <input type="text" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" /> *@
-                    @*     <button class="fishloot-search-button"> *@
-                    @*         <i class="fas fa-search"></i> *@
-                    @*     </button> *@
-                    @* </div> *@
-                    <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container">
-                        <input type="text" name="q" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" />
-                        <input type="text" name="location" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" />
+                    <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container" id="navbarSearchForm">
+                        <input type="text" name="query" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" />
+                        <input type="text" name="location" id="navbarLocationInput" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" />
+                        <div id="location-suggestion" class="location-dropdown" style="display:none;">
+                            <button type="button" id="useCurrentLocationBtn" class="dropdown-item">📍 Sử dụng vị trí hiện tại</button>
+                        </div>
+                        <input type="hidden" name="lat" id="navbarLat" />
+                        <input type="hidden" name="lng" id="navbarLng" />
                         <button class="fishloot-search-button" type="submit">
                             <i class="fas fa-search"></i>
                         </button>

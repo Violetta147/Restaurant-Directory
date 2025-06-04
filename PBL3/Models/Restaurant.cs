@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using NetTopologySuite.Geometries;
 
 namespace PBL3.Models
 {
@@ -12,11 +13,11 @@ namespace PBL3.Models
         [Required]
         public string Name { get; set; } = string.Empty;
 
+        //vị trí lat long sử dụng NetTopologySuite
+        //trong gói Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite
         [Required]
-        public double Latitude { get; set; }
-
-        [Required]
-        public double Longitude { get; set; }
+        [Column(TypeName = "geometry")]
+        public Point Location { get; set; }
 
         [StringLength(250)]
         public string Address { get; set; } = string.Empty;
@@ -40,8 +41,15 @@ namespace PBL3.Models
         public string Website { get; set; } = string.Empty;
 
         public bool IsOpen { get; set; } = true;
+        
+        // Giờ mở cửa và đóng cửa
+        public TimeSpan? OpeningTime { get; set; }
+        public TimeSpan? ClosingTime { get; set; }
 
         [StringLength(500)]
         public string Keywords { get; set; } = string.Empty; // For better search capabilities
+        
+        // Số lượng đánh giá
+        public int ReviewCount { get; set; } = 0;
     }
 }

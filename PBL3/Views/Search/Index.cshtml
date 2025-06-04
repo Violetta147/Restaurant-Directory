@@ -1,189 +1,233 @@
-﻿@model SearchResultsViewModel
+@model SearchResultsViewModel
 @{
-    ViewData["Title"] = "Search Results";
+    ViewData["Title"] = "Tìm kiếm nhà hàng";
+    var categories = ViewBag.Categories as List<string> ?? new List<string>();
 }
 
+<!-- Styles được bơm vào _Layout -->
 @section Styles {
     <!-- Mapbox GL CSS -->
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/search-results.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/search-custom.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/restaurant-card.css" />
 }
 
 <!-- Hidden fields to pass data to JavaScript -->
-<input type="hidden" id="mapbox-token" value="YOUR_MAPBOX_ACCESS_TOKEN">
-<input type="hidden" id="map-initial-lat" value="@Model.Center.Latitude">
-<input type="hidden" id="map-initial-lng" value="@Model.Center.Longitude">
+<input type="hidden" id="mapbox-token" value="@ViewData["MapboxToken"]">
+<input type="hidden" id="map-initial-lat" value="@(Model.UserLat?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Model.MapCenterLat.ToString(System.Globalization.CultureInfo.InvariantCulture))">
+<input type="hidden" id="map-initial-lng" value="@(Model.UserLng?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Model.MapCenterLng.ToString(System.Globalization.CultureInfo.InvariantCulture))">
 <input type="hidden" id="map-initial-query" value="@Model.Query">
-<input type="hidden" id="map-initial-category" value="@Model.Category">
+<input type="hidden" id="map-initial-category" value="@Model.SelectedCategory">
+<input type="hidden" id="map-initial-distance-category" value="@Model.SelectedDistanceCategory">
 
-<!-- 3-column layout following Yelp-style UI -->
-<div id="yelp-style-results-layout">
-    <!-- LEFT PANEL: Categories & Filters -->
-    <div id="filters-sidebar-frame">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">Filters</h2>
+<!-- Main Page Content: Two main sections (Left and Right) -->
+<div class="container-fluid mt-4" id="main-frame">
+    <div class="row">
+        <!-- Left Section: Contains Filters Column and Restaurant List Column -->
+        <div class="col-lg-8" id="left-section">
+            <div class="row">
+                <!-- Filters Column -->
+                <div class="col-md-3" id="filters-column">
+                    <div class="card shadow-sm mb-md-0 mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Bộ lọc</h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="Index" asp-controller="Search" method="get" id="filter-form" class="row g-2">
+                                <!-- Hidden fields to persist main search query and location from navbar -->
+                                <input type="hidden" name="query" value="@Model.Query" />
+                                <input type="hidden" name="location" value="@Model.Location" />
+                                @if (Model.UserLat.HasValue)
+                                {
+                                    <input type="hidden" name="lat" value="@Model.UserLat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                }
+                                @if (Model.UserLng.HasValue)
+                                {
+                                    <input type="hidden" name="lng" value="@Model.UserLng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                }
+                                <input type="hidden" name="page" value="1" /> <!-- Always reset to page 1 on filter change -->
+                                <input type="hidden" name="pageSize" value="@Model.PageSize" />
 
-        <!-- Categories -->
-        <div id="categories-filter-container" class="mb-6">
-            <h3 class="font-semibold mb-2">Cuisine</h3>
-            <div class="space-y-2">
-                <label class="flex items-center">
-                    <input type="checkbox" class="category-checkbox rounded mr-2" value="Italian">
-                    <span>Italian</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" class="category-checkbox rounded mr-2" value="Mexican">
-                    <span>Mexican</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" class="category-checkbox rounded mr-2" value="Japanese">
-                    <span>Japanese</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" class="category-checkbox rounded mr-2" value="Vietnamese">
-                    <span>Vietnamese</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" class="category-checkbox rounded mr-2" value="American">
-                    <span>American</span>
-                </label>
-            </div>
-        </div>
+                                <!-- Sort Options -->
+                                <div class="col-12 mb-3">
+                                    <label for="selectedSortOption" class="form-label fw-bold">Sắp xếp theo</label>
+                                    <select asp-for="SelectedSortOption" asp-items="Model.SortOptions" class="form-select form-select-sm"></select>
+                                </div>
 
-        <!-- Price Range -->
-        <div id="price-filter-container" class="mb-6">
-            <h3 class="font-semibold mb-2">Price Range</h3>
-            <div class="flex space-x-2">
-                <button class="price-filter px-3 py-1 border rounded-full hover:bg-primary hover:text-white" data-price="1">$</button>
-                <button class="price-filter px-3 py-1 border rounded-full hover:bg-primary hover:text-white" data-price="2">$$</button>
-                <button class="price-filter px-3 py-1 border rounded-full hover:bg-primary hover:text-white" data-price="3">$$$</button>
-                <button class="price-filter px-3 py-1 border rounded-full hover:bg-primary hover:text-white" data-price="4">$$$$</button>
-            </div>
-        </div>
+                                <!-- Category Filter -->   
+                                <div class="col-12 mb-3">
+                                    <label for="selectedCategory" class="form-label fw-bold">Danh mục</label>
+                                    <select asp-for="SelectedCategory" asp-items="Model.Categories" class="form-select form-select-sm"></select>
+                                </div>
 
-        <!-- Rating Filter -->
-        <div id="rating-filter-container" class="mb-6">
-            <h3 class="font-semibold mb-2">Rating</h3>
-            <div class="space-y-2">
-                <label class="flex items-center">
-                    <input type="radio" name="rating" class="rating-radio rounded mr-2" value="4">
-                    <span>4+ Stars</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="radio" name="rating" class="rating-radio rounded mr-2" value="3">
-                    <span>3+ Stars</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="radio" name="rating" class="rating-radio rounded mr-2" value="2">
-                    <span>2+ Stars</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="radio" name="rating" class="rating-radio rounded mr-2" value="0">
-                    <span>Any</span>
-                </label>
-            </div>
-        </div>
-
-        <!-- Apply Filters Button -->
-        <button id="apply-filters-btn" class="w-full bg-primary text-white py-2 rounded hover:bg-secondary transition">
-            Apply Filters
-        </button>
-    </div>
-
-    <!-- CENTER: Restaurant Results List -->
-    <div id="restaurant-results-frame">
-        <div id="search-results-header" class="mb-4">
-            <h2 class="text-2xl font-bold text-gray-800">
-                @if (!string.IsNullOrEmpty(Model.Query))
-                {
-                    <text>Best "@Model.Query" restaurants</text>
-
-                    if (!string.IsNullOrEmpty(Model.LocationQuery))
-                    {
-                        <text> near @Model.LocationQuery</text>
-                    }
-                }
-                else
-                {
-                    <text>Popular Restaurants</text>
-
-                    if (!string.IsNullOrEmpty(Model.LocationQuery))
-                    {
-                        <text> near @Model.LocationQuery</text>
-                    }
-                }
-            </h2>
-        </div>
-
-        <div id="restaurant-list-container" class="space-y-6">
-            @if (Model.Restaurants != null && Model.Restaurants.Any())
-            {
-                @foreach (var restaurant in Model.Restaurants)
-                {
-                    <div class="restaurant-item bg-white rounded-lg shadow-md overflow-hidden"
-                         data-id="@restaurant.Id"
-                         data-lat="@restaurant.Latitude"
-                         data-lng="@restaurant.Longitude">
-                        <div class="flex flex-col md:flex-row">
-                            <div class="md:w-1/3">
-                                <img src="https://via.placeholder.com/300x200?text=@Uri.EscapeDataString(restaurant.Name)" alt="@restaurant.Name" class="w-full h-full object-cover">
-                            </div>
-                            <div class="p-4 md:w-2/3">
-                                <div class="flex justify-between items-start">
-                                    <h3 class="text-xl font-bold">@restaurant.Name</h3>
-                                    <div class="flex items-center bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                                        <i class="fas fa-star mr-1 text-yellow-500"></i>
-                                        <span>@restaurant.Rating</span>
+                                <!-- Distance Filter -->
+                                <div class="col-12 mb-3">
+                                    <label for="selectedDistanceCategory" class="form-label fw-bold">Khoảng cách</label>
+                                    <select asp-for="SelectedDistanceCategory" asp-items="Model.DistanceOptions" class="form-select form-select-sm"></select>
+                                </div>
+                                
+                                <!-- MinRating -->
+                                <div class="col-12 mb-3">
+                                    <label asp-for="MinRating" class="form-label fw-bold">Đánh giá tối thiểu</label>
+                                    <select asp-for="MinRating" class="form-select form-select-sm">
+                                        <option value="">Bất kỳ</option>
+                                        <option value="4.5">4.5+ sao</option>
+                                        <option value="4">4+ sao</option>
+                                        <option value="3.5">3.5+ sao</option>
+                                        <option value="3">3+ sao</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Other Filters (Example: IsOpenNow) -->
+                                <div class="col-12 mb-3">
+                                    <div class="form-check">
+                                        <input asp-for="IsOpenNow" class="form-check-input" />
+                                        <label asp-for="IsOpenNow" class="form-check-label">Đang mở cửa</label>
                                     </div>
                                 </div>
-                                <div class="flex items-center text-gray-600 mt-1">
-                                    <span>@restaurant.Category</span>
-                                    <span class="mx-2">•</span>
-                                    <span>@restaurant.Address</span>
+
+                                <div class="col-12">
+                                    <div class="d-grid w-100">
+                                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-2"></i>Áp dụng bộ lọc</button>
+                                    </div>
                                 </div>
-                                <div class="mt-4 flex justify-between items-center">
-                                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Open</span>
-                                    <button class="view-on-map-btn text-primary font-medium hover:underline">View on Map</button>
-                                </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
-                }
+                </div>
 
-                <!-- Pagination using XPageList HTML helpers -->
-                <div class="mt-8 flex justify-center">
-                    @Html.PagedListPager((IPagedList)Model.Restaurants, page => Url.Action("Index", new
-                        {
-                            q = Model.Query,
-                            location = Model.LocationQuery,
-                            category = Model.Category,
-                            page
-                        }), new PagedListRenderOptions
-           {
-               LiElementClasses = new string[] { "px-3", "py-1", "rounded", "border", "text-gray-600", "hover:bg-gray-100", "mx-1" },
-               ActiveLiElementClass = "bg-primary text-white"
-           })
+                <!-- Restaurant List Column -->
+                <div class="col-md-9" id="restaurants-column">
+                    @{
+                        bool hasRestaurants = Model.Restaurants?.Any() ?? false;
+                    }
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    @if (!hasRestaurants)
+                                    {
+                                        <span class="fw-bold">Không tìm thấy kết quả nào cho "@Model.Query" tại @Model.Location</span>
+                                    }
+                                    else
+                                    {
+                                        @if (!string.IsNullOrEmpty(Model.Query))
+                                        {
+                                            <span class="fw-bold">"@Model.Query"</span>
+                                        }
+                                        else if (!string.IsNullOrEmpty(Model.SelectedCategory))
+                                        {
+                                            <span class="fw-bold">@Model.SelectedCategory</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Tất cả nhà hàng</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(Model.Location))
+                                        {
+                                            <span class="text-secondary"> gần @Model.Location</span>
+                                        }
+                                    }
+                                </h5>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            @if (!hasRestaurants)
+                            {
+                                <div class="p-4">
+                                    <p class="mb-2 fw-bold">Gợi ý để cải thiện kết quả tìm kiếm:</p>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="bi bi-geo-alt text-primary me-2"></i> Thử một địa điểm khác</li>
+                                        <li class="mb-2"><i class="bi bi-spell-check text-primary me-2"></i> Kiểm tra lỗi chính tả hoặc thử cách viết khác</li>
+                                        <li class="mb-2"><i class="bi bi-funnel text-primary me-2"></i> Thử bỏ một số bộ lọc hiện tại</li>
+                                    </ul>
+                                </div>
+                            }
+                            else
+                            {
+                                <div id="restaurant-list" class="row row-cols-1 g-4">
+                                    @await Html.PartialAsync("_RestaurantListPartial", Model.Restaurants)
+                                </div>
+
+                                <!-- Pagination -->
+                                <div class="mt-4 d-flex justify-content-center">
+                                    @Html.PagedListPager(Model.Restaurants, page => "#", 
+                                    new PagedListRenderOptions {
+                                        LiElementClasses = new[] { "page-item" },
+                                        PageClasses = new[] { "page-link" },
+                                        DisplayLinkToFirstPage = PagedListDisplayMode.IfNeeded,
+                                        DisplayLinkToLastPage = PagedListDisplayMode.IfNeeded,
+                                        DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+                                        DisplayLinkToNextPage = PagedListDisplayMode.Always,
+                                        MaximumPageNumbersToDisplay = 5,
+                                        UlElementClasses = new[] { "pagination", "pagination-sm" },
+                                        FunctionToTransformEachPageLink = (liTag, aTag) => {
+                                            // Thêm sự kiện click vào mỗi link phân trang
+                                            aTag.Attributes.Add("onclick", "loadPage(event, this)");
+                                            var pageNumber = aTag.InnerHtml.ToString().Trim();
+                                            aTag.Attributes.Add("data-page", pageNumber);
+                                            liTag.InnerHtml.Clear();
+                                            liTag.InnerHtml.AppendHtml(aTag);
+                                            return liTag;
+                                        }
+                                    })
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
-            }
-            else
-            {
-                <div class="text-center py-10">
-                    <p class="text-lg text-gray-500">No restaurants found matching your criteria.</p>
-                    <p class="text-gray-500">Try adjusting your filters or search terms.</p>
-                </div>
-            }
+            </div>
         </div>
-    </div>
 
-    <!-- RIGHT: Map Display -->
-    <div id="map-sidebar-frame">
-        <button id="reload-map-button" class="font-medium">
-            <i class="fas fa-sync-alt mr-1"></i> Show restaurants in this area
-        </button>
-        <div id="mapbox-container"></div>
+        <!-- Right Section: Map -->
+        <div class="col-lg-4" id="map-section">
+            <div id="mapbox-container" style="height: calc(100vh - 100px); min-height: 500px; border-radius: 8px;"></div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
+    <script>
+        function loadPage(event, element) {
+            event.preventDefault();
+            
+            // Lấy số trang từ thuộc tính data-page
+            const page = element.getAttribute('data-page');
+            if (!page) return;
+
+            // Lấy các tham số tìm kiếm hiện tại
+            const params = new URLSearchParams(window.location.search);
+            
+            // Cập nhật tham số trang
+            params.set('page', page);
+            
+            // Hiển thị loading
+            const restaurantList = document.getElementById('restaurant-list');
+            restaurantList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            
+            // Gửi yêu cầu AJAX
+            fetch(`/Search/GetRestaurants?${params.toString()}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Cập nhật nội dung danh sách nhà hàng
+                    restaurantList.innerHTML = html;
+                    
+                    // Cập nhật URL mà không tải lại trang
+                    const newUrl = `${window.location.pathname}?${params.toString()}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    restaurantList.innerHTML = '<div class="alert alert-danger">Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.</div>';
+                });
+        }
+    </script>
+    
     <!-- Mapbox GL JS -->
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
     <script src="~/js/search-map.js" asp-append-version="true"></script>

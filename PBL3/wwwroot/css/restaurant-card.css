@@ -1,0 +1,31 @@
+/* Rating stars CSS using CSS variables */
+.rating-stars {
+    --percent: calc(var(--rating) / 5 * 100%);
+    display: inline-block;
+    font-size: 0.9rem;
+    font-family: Times;
+    line-height: 1;
+}
+
+.rating-stars::before {
+    content: '★★★★★';
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #FFD700 var(--percent), #ddd var(--percent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Hover effect for restaurant cards */
+.restaurant-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.restaurant-card .card-link {
+    position: relative;
+    z-index: 1;
+}

@@ -11,10 +11,11 @@ using PBL3.Repositories.Interfaces;
 using PBL3.Repositories;
 using PBL3.Services.Interfaces;
 using PBL3.Services;
+using NetTopologySuite;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ADD SERVICES TO THE CONTAINER
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
@@ -23,17 +24,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         {
             sqlOptions.MigrationsAssembly("PBL3");
             sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "dbo");
+            sqlOptions.UseNetTopologySuite(); //thêm dòng này để dbcontext hiểu được geometry của NetTopologySuite
         }
     ));
 builder.Services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-// Register repositories
+
+// REGISTER REPOSITORY
 builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
 
-// Register services
+// REGISTER SERVICE
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 
-
+// CONFIGURE IDENTITY
 builder.Services.Configure<IdentityOptions>(options =>
 {
 

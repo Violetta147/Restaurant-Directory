@@ -1,24 +1,39 @@
-﻿/* Yelp-style 3-column layout */
-#yelp-style-results-layout {
+﻿/* Main frame layout - contains left and right sections */
+#main-frame {
     display: flex;
     min-height: calc(100vh - 150px);
 }
 
-#filters-sidebar-frame {
+.row {
+    width: 100%;
+    margin: 0;
+}
+
+/* Left section - contains filters and restaurants columns */
+#left-section {
+    display: flex;
+    width: 67%;
+}
+
+/* Filters column - left side of left section */
+#filters-column {
     width: 250px;
+    min-width: 250px;
     overflow-y: auto;
     background-color: white;
     padding: 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-#restaurant-results-frame {
+/* Restaurant list column - right side of left section */
+#restaurants-column {
     flex: 1;
     overflow-y: auto;
     padding: 0 1.5rem;
 }
 
-#map-sidebar-frame {
+/* Map section - right section */
+#map-section {
     width: 33%;
     position: relative;
     min-height: 600px;
@@ -51,9 +66,9 @@
     transition: all 0.2s;
 }
 
-    .restaurant-item:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+.restaurant-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
 
 .restaurant-marker {
     cursor: pointer;
@@ -65,18 +80,66 @@
 
 /* Responsive layout */
 @media (max-width: 992px) {
-    #yelp-style-results-layout {
+    #main-frame {
         flex-direction: column;
     }
 
-    #filters-sidebar-frame,
-    #map-sidebar-frame {
+    #left-section {
         width: 100%;
-        height: 400px;
+        flex-direction: column;
     }
 
-    #map-sidebar-frame {
-        margin-top: 20px;
-        position: relative;
+    #filters-column {
+        width: 100%;
+        min-width: 100%;
+        margin-bottom: 20px;
     }
+
+    #restaurants-column {
+        padding: 0;
+    }
+
+    #map-section {
+        width: 100%;
+        height: 400px;
+        margin-top: 20px;
+    }
+}
+
+/* Override Bootstrap column padding for better alignment */
+.col-md-3, .col-md-9, .col-lg-8, .col-lg-4 {
+    padding: 0;
+}
+
+/* Card styles to match the yelp layout */
+.card {
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: white;
+    padding: 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.card-body {
+    padding: 15px;
+}
+
+/* Form control styles to match yelp */
+.form-select, .form-control {
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #FF6E40;
+    border-color: #FF6E40;
+}
+
+.btn-primary:hover {
+    background-color: #E85D30;
+    border-color: #E85D30;
 }

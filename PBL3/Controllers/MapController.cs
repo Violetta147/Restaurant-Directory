@@ -16,11 +16,11 @@ namespace PBL3.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetRestaurantsJson(double lat, double lng, double radius = 3.0, string q = "", string category = "")
+        public async Task<IActionResult> GetRestaurantsJson(double lat, double lng, string selectedDistanceCategory = "3km", string q = "", string category = "")
         {
             // Get restaurants within radius for map display
             var restaurants = await _restaurantService.GetRestaurantsForMapAsync(
-                lat, lng, radius, q, category);
+                lat, lng, selectedDistanceCategory, q, category);
 
             // Format as GeoJSON for Mapbox
             var geoJson = new

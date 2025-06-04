@@ -68,7 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear existing markers
         clearMarkers();
 
-        // Get all restaurant items from the list and add markers
+        // đi tìm trong trang các thẻ có class là restaurant-item tức là nhà hàng
+        // rồi lấy thông tin cần thiết từ các thẻ để tạo marker
         const restaurantItems = document.querySelectorAll('.restaurant-item');
 
         restaurantItems.forEach(item => {
@@ -130,11 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
             marker: marker,
             element: el
         });
+        //thêm sự kiện click marker
+        
 
-        // Click event to highlight corresponding list item
-        el.addEventListener('click', () => {
-            highlightRestaurantInList(id);
-        });
     }
 
     function clearMarkers() {
@@ -200,35 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    function highlightRestaurantInList(id) {
-        // Remove highlight from all items
-        document.querySelectorAll('.restaurant-item').forEach(item => {
-            item.style.border = 'none';
-        });
-
-        // Find and highlight item with matching id
-        const item = document.querySelector(`.restaurant-item[data-id="${id}"]`);
-        if (item) {
-            item.style.border = '2px solid #FF6E40';
-            item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-
-    function highlightMarkerById(id) {
-        // Reset all markers
-        restaurantMarkers.forEach(m => {
-            m.element.style.backgroundColor = 'white';
-            m.element.querySelector('i').style.color = '#FF6E40';  // primary color
-        });
-
-        // Find and highlight the marker
-        const markerObj = restaurantMarkers.find(m => m.id === id);
-        if (markerObj) {
-            markerObj.element.style.backgroundColor = '#FF6E40';
-            markerObj.element.querySelector('i').style.color = 'white';
-        }
-    }
-
     function setupEventListeners() {
         // "Reload Map" button click
         document.getElementById('reload-map-button').addEventListener('click', loadRestaurantsInMapArea);
@@ -239,49 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = parseInt(this.dataset.id);
                 const lat = parseFloat(this.dataset.lat);
                 const lng = parseFloat(this.dataset.lng);
-
-                // Fly to this restaurant on the map
-                map.flyTo({
-                    center: [lng, lat],
-                    zoom: 16
-                });
-
-                // Highlight this item
-                highlightRestaurantInList(id);
-
-                // Highlight marker
-                highlightMarkerById(id);
-
-                // Find and open popup
-                const markerObj = restaurantMarkers.find(m => m.id === id);
-                if (markerObj) {
-                    markerObj.marker.togglePopup();
-                }
-            });
-        });
-
-        // "View on Map" button click
-        document.querySelectorAll('.view-on-map-btn').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation(); // Prevent parent click
-
-                const item = this.closest('.restaurant-item');
-                const id = parseInt(item.dataset.id);
-                const lat = parseFloat(item.dataset.lat);
-                const lng = parseFloat(item.dataset.lng);
-
-                // Fly to this restaurant on the map
-                map.flyTo({
-                    center: [lng, lat],
-                    zoom: 16
-                });
-
-                // Highlight this item
-                highlightRestaurantInList(id);
-
-                // Highlight marker
-                highlightMarkerById(id);
-
+                
                 // Find and open popup
                 const markerObj = restaurantMarkers.find(m => m.id === id);
                 if (markerObj) {
@@ -323,11 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedPrices) {
                 url += `price=${encodeURIComponent(selectedPrices)}&`;
             }
-
-            // Redirect to filtered results
-            window.location.href = url.endsWith('&')
-                ? url.slice(0, -1) // Remove trailing &
-                : url;
         });
 
         // Price filter toggle
