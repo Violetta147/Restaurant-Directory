@@ -1,6 +1,7 @@
 @model SearchResultsViewModel
 @{
     ViewData["Title"] = "Tìm kiếm nhà hàng";
+    ViewData["BodyClass"] = "search-page";
     var categories = ViewBag.Categories as List<string> ?? new List<string>();
 }
 
@@ -12,8 +13,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/search-results.css" asp-append-version="true">
-    <link rel="stylesheet" href="~/css/search-custom.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/restaurant-card.css" />
+    <link rel="stylesheet" href="~/css/restaurant-card.css" asp-append-version="true"/>
 }
 
 <!-- Hidden fields to pass data to JavaScript -->
@@ -25,17 +25,16 @@
 <input type="hidden" id="map-initial-distance-category" value="@Model.SelectedDistanceCategory">
 
 <!-- Main Page Content: Two main sections (Left and Right) -->
-<div class="container-fluid mt-4" id="main-frame">
-    <div class="row">
+<div class="container-fluid px-0 mt-4" id="main-frame">
+    <div class="d-flex w-100">
         <!-- Left Section: Contains Filters Column and Restaurant List Column -->
-        <div class="col-lg-8" id="left-section">
-            <div class="row">
-                <!-- Filters Column -->
-                <div class="col-md-3" id="filters-column">
-                    <div class="card shadow-sm mb-md-0 mb-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Bộ lọc</h5>
-                        </div>
+        <div id="left-section">
+            <!-- Filters Column -->
+            <div id="filters-column">
+                <div class="card shadow-sm mb-md-0 mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Bộ lọc</h5>
+                    </div>
                         <div class="card-body">
                             <form asp-action="Index" asp-controller="Search" method="get" id="filter-form" class="row g-2">
                                 <!-- Hidden fields to persist main search query and location from navbar -->
@@ -101,7 +100,7 @@
                 </div>
 
                 <!-- Restaurant List Column -->
-                <div class="col-md-9" id="restaurants-column">
+                <div id="restaurants-column">
                     @{
                         bool hasRestaurants = Model.Restaurants?.Any() ?? false;
                     }
@@ -182,14 +181,13 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Right Section: Map -->
-        <div class="col-lg-4" id="map-section">
-            <div id="mapbox-container"></div> 
+            <!-- Right Section: Map -->
+            <div id="map-section">
+                <div id="mapbox-container"></div> 
+            </div>
         </div>
     </div>
-</div>
 
 @section Scripts {
     <script>

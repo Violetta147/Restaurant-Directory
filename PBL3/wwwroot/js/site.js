@@ -1,4 +1,31 @@
-$(function () {
+$(function () {    // Khởi tạo một lần khi page load để tắt autocomplete của trình duyệt
+    $('#navbarSearchForm').attr('autocomplete', 'off');
+    $('#navbarLocationInput, .fishloot-search-input').attr('autocomplete', 'off');
+    
+    // Ngăn trình duyệt hiển thị các giá trị đã lưu trước đó 
+    // bằng cách đổi tên trường để trình duyệt không nhận dạng được
+    $('#navbarLocationInput')
+        .attr('name', 'randomloc-' + Math.floor(Math.random() * 1000000));
+        // Đơn giản hóa xử lý dropdown
+    $(document).ready(function() {
+        const locationInput = $('#navbarLocationInput');
+        const dropdown = $('#location-suggestion');
+        
+        // Khi focus vào input -> hiển thị dropdown
+        locationInput.on('focus', function() {
+            dropdown.show();
+        });
+        
+        // Khi click vào bất kỳ đâu ngoài input và dropdown -> ẩn dropdown
+        $(document).on('click', function(e) {
+            if (!locationInput.is(e.target) && 
+                !dropdown.is(e.target) && 
+                dropdown.has(e.target).length === 0) {
+                dropdown.hide();
+            }
+        });
+    });
+    
     // --- Code cho Login Modal (giữ nguyên từ trước) ---
     $('body').on('click', '#loginModalButton', function (event) {
         event.preventDefault();
@@ -118,82 +145,108 @@ $(function () {
     $('body').on('hidden.bs.modal', '#registerModalInstance', function () {
         $(this).empty();
     });
-
-
     // --- NAVBAR LOCATION & GEOCODING --- 
     const mapboxTokenMeta = document.querySelector('meta[name="mapbox-token"]');
     const MAPBOX_ACCESS_TOKEN = mapboxTokenMeta ? mapboxTokenMeta.content : null;
-
+    
     if (!MAPBOX_ACCESS_TOKEN) {
         console.warn('Mapbox Access Token not found. Geocoding features will be disabled.');
     }
-
+    
     const navbarLatInput = $('#navbarLat');
     const navbarLngInput = $('#navbarLng');
     const navbarLocationInput = $('#navbarLocationInput');
-    const navbarSearchForm = $('#navbarSearchForm');
-
-    // 1. "Use Current Location" button
-    $('#navbarUseCurrentLocation').on('click', function() {
+    const navbarSearchForm = $('#navbarSearchForm');    const locationSuggestion = $('#location-suggestion');
+    
+    // Tất cả xử lý dropdown được gom vào một chỗ ở phía trên
+    
+    // 1. "Use Current Location" button - Đơn giản hóa
+    $('#navbarUseCurrentLocation').on('click', function(e) {
+        e.stopPropagation(); // Ngăn chặn sự kiện click lan truyền
+        
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser.');
+            alert('Geolocation không được hỗ trợ bởi trình duyệt của bạn.');
             return;
         }
-
+        
+        // Thay đổi văn bản để báo hiệu đang xử lý
+        const originalText = $(this).html();
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> Đang xác định vị trí...');
+          // Ẩn dropdown ngay lập tức
+        locationSuggestion.hide();
+        
         navigator.geolocation.getCurrentPosition(function(position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
             navbarLatInput.val(lat.toFixed(6));
             navbarLngInput.val(lng.toFixed(6));
-            navbarLocationInput.val('Current Location'); // Placeholder text
+            
+            // Đặt giá trị tạm thời là "Vị trí hiện tại"
+            navbarLocationInput.val('Vị trí hiện tại');
+            
+            // Restore original button text
+            $('#navbarUseCurrentLocation').html('<i class="fas fa-map-marker-alt"></i> Sử dụng vị trí hiện tại');
 
-            // Optional: Reverse geocode to get address string
+            // Reverse geocode để lấy địa chỉ thật
             if (MAPBOX_ACCESS_TOKEN) {
                 fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=1&language=vi`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.features && data.features.length > 0) {
-                            navbarLocationInput.val(data.features[0].place_name_vi || data.features[0].place_name);
+                            // Lưu địa chỉ thật vào một thuộc tính data để dùng khi submit
+                            const realAddress = data.features[0].place_name_vi || data.features[0].place_name;
+                            navbarLocationInput.data('realAddress', realAddress);
+                            // Vẫn giữ hiển thị là "Vị trí hiện tại" cho UX tốt hơn
+                            // navbarLocationInput.val(realAddress);
                         }
                     })
-                    .catch(error => console.error('Error reverse geocoding:', error));
-            }
+                    .catch(error => console.error('Error reverse geocoding:', error));            }
             // Optional: Automatically submit the form
-            // navbarSearchForm.submit(); 
+            // navbarSearchForm.submit();
+            
         }, function(error) {
-            let message = 'Error getting location: ';
+            // Restore original button text in case of error
+            $('#navbarUseCurrentLocation').html('<i class="fas fa-map-marker-alt"></i> Sử dụng vị trí hiện tại');
+            
+            let message = 'Lỗi khi lấy vị trí: ';
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message += "User denied the request for Geolocation.";
+                    message += "Quyền truy cập vị trí đã bị từ chối.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    message += "Location information is unavailable.";
+                    message += "Thông tin vị trí không khả dụng.";
                     break;
                 case error.TIMEOUT:
-                    message += "The request to get user location timed out.";
+                    message += "Yêu cầu lấy vị trí người dùng đã hết thời gian.";
                     break;
                 case error.UNKNOWN_ERROR:
-                    message += "An unknown error occurred.";
+                    message += "Đã xảy ra lỗi không xác định.";
                     break;
-            }
-            alert(message);
+            }            alert(message);
         });
     });
-
+    
     // 2. Geocode address input on form submit
+    
     if (navbarSearchForm.length > 0) {
         navbarSearchForm.on('submit', async function(event) {
-            const locationText = navbarLocationInput.val().trim();
+            // Đảm bảo field có tên đúng để server có thể xử lý
+            const locationInput = $('#navbarLocationInput');
+            // Đặt lại tên field về 'location' trước khi submit
+            locationInput.attr('name', 'location');
+            
+            const locationText = locationInput.val().trim();
             // Store original values from hidden inputs for logic, but clear them for URL if 'Current Location'
             const originalLatVal = navbarLatInput.val();
             const originalLngVal = navbarLngInput.val();
 
-            if (locationText === 'Current Location') {
-                // Clear the input fields so they don't go into the URL for 'Current Location' searches.
-                // The server-side logic will use viewModel.UserLat/UserLng instead.
-                navbarLatInput.val('');
-                navbarLngInput.val('');
+            if (locationText === 'Vị trí hiện tại') {
+                // Nếu có địa chỉ thật đã được lưu trong data, sử dụng nó
+                const realAddress = locationInput.data('realAddress');
+                if (realAddress) {
+                    locationInput.val(realAddress);
+                }
             }
 
             // Only geocode if location text is present AND lat/lng are not already set (e.g., by 'use current location')

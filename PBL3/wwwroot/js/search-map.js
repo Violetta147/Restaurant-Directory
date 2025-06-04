@@ -16,6 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMap();
     setupEventListeners();
 
+    // Handle window resize to ensure map takes full available space
+    window.addEventListener('resize', () => {
+        if (map) {
+            setTimeout(() => {
+                map.resize();
+            }, 100);
+        }
+    });
+
     function initializeMap() {
         // Initialize the map
         mapboxgl.accessToken = document.getElementById('mapbox-token').value;
@@ -32,6 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initialize map
         map.on('load', function () {
+            // Force map to resize to fit container
+            setTimeout(() => {
+                map.resize();
+            }, 100);
+
             // Add user location control with high accuracy
             map.addControl(new mapboxgl.GeolocateControl({
                 positionOptions: {

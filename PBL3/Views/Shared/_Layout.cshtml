@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="@ViewData["BodyClass"]">
     <header>
         <nav class="fishloot-navbar">
             <div class="container-fluid">
@@ -32,17 +32,21 @@
                     </a>
 
 					@* Thay đổi logo và tên ở đây *@
-                    <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container" id="navbarSearchForm">
-                        <input type="text" name="query" class="fishloot-search-input" placeholder="Kinda Hungry huh? Go loot some fishes!" />
-                        <input type="text" name="location" id="navbarLocationInput" class="fishloot-search-location" placeholder="Even how large the ocean are, we can still reach you" />
-                        <div id="location-suggestion" class="location-dropdown" style="display:none;">
-                            <button type="button" id="useCurrentLocationBtn" class="dropdown-item">📍 Sử dụng vị trí hiện tại</button>
+                    <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container" id="navbarSearchForm" autocomplete="off">
+                        <div class="search-inputs-group">
+                            <input type="text" name="query" class="fishloot-search-input" autocomplete="off" placeholder="Kinda Hungry huh? Go loot some fishes!" />
+                            <div class="location-input-container">
+                                <input type="text" name="randomloc-283756" id="navbarLocationInput" class="fishloot-search-location" autocomplete="off" placeholder="Even how large the ocean are, we can still reach you" />
+                                <div id="location-suggestion" class="location-dropdown">
+                                    <button type="button" id="navbarUseCurrentLocation" class="dropdown-item"><i class="fas fa-map-marker-alt"></i> Sử dụng vị trí hiện tại</button>
+                                </div>
+                            </div>
+                            <button class="fishloot-search-button" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
                         </div>
                         <input type="hidden" name="lat" id="navbarLat" />
                         <input type="hidden" name="lng" id="navbarLng" />
-                        <button class="fishloot-search-button" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
                     </form>
 
                     <div class="fishloot-nav-links">
@@ -77,11 +81,20 @@
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+    @if (ViewData["BodyClass"]?.ToString() == "search-page")
+    {
+        <main role="main" class="pb-3" style="padding: 0; margin: 0;">
             @RenderBody()
         </main>
-    </div>
+    }
+    else
+    {
+        <div class="container">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+    }
 
     <!-- Modal Placeholder (đặt trước các thẻ script chính) -->
     <div id="loginModalPlaceholder"></div>
@@ -95,6 +108,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/location-handler.js" asp-append-version="true"></script>
 
     @* Script để parse validation cho form trong modal nếu dùng jQuery Unobtrusive Validation *@
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
