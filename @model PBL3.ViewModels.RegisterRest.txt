@@ -1,0 +1,146 @@
+@model PBL3.ViewModels.RegisterRestaurantViewModel
+@{
+    ViewData["Title"] = "Đăng ký Nhà hàng của bạn";
+}
+
+@if (!User.Identity.IsAuthenticated && Convert.ToBoolean(ViewData["ShowLoginModal"]))
+{
+    @* Người dùng chưa đăng nhập và controller yêu cầu mở modal.
+       JavaScript bên dưới sẽ xử lý việc mở modal.
+       Bạn có thể hiển thị một thông báo ngắn gọn ở đây nếu muốn,
+       nhưng JavaScript sẽ là yếu tố chính để mở modal. *@
+    <div id="triggerLoginModalMessage" class="alert alert-info" style="display:none;">
+        Vui lòng đăng nhập để tiếp tục đăng ký nhà hàng. Modal đăng nhập sẽ được hiển thị.
+    </div>
+}
+
+@if (User.Identity.IsAuthenticated) // Chỉ hiển thị form nếu đã đăng nhập
+{
+    <h2>@ViewData["Title"]</h2>
+    <hr />
+    <div class="row">
+        <div class="col-md-8">
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <h4>Thông tin Nhà hàng</h4>
+                <hr />
+                <div class="form-group mb-3">
+                    <label asp-for="Name" class="control-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Description" class="control-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="PhoneNumber" class="control-label"></label>
+                    <input asp-for="PhoneNumber" class="form-control" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Website" class="control-label"></label>
+                    <input asp-for="Website" class="form-control" />
+                    <span asp-validation-for="Website" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="OpeningHours" class="control-label"></label>
+                    <input asp-for="OpeningHours" class="form-control" />
+                    <span asp-validation-for="OpeningHours" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="PriceRange" class="control-label"></label>
+                    <select asp-for="PriceRange" class="form-control" asp-items="Html.GetEnumSelectList<PriceRange>()">
+                        <option value="">-- Chọn khoảng giá --</option>
+                    </select>
+                    <span asp-validation-for="PriceRange" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="MainImageFile" class="control-label"></label>
+                    <input asp-for="MainImageFile" class="form-control" type="file" />
+                    <span asp-validation-for="MainImageFile" class="text-danger"></span>
+                </div>
+
+                <h4 class="mt-4">Địa chỉ Nhà hàng</h4>
+                <hr />
+                <div class="form-group mb-3">
+                    <label asp-for="AddressLine1" class="control-label"></label>
+                    <input asp-for="AddressLine1" class="form-control" />
+                    <span asp-validation-for="AddressLine1" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Ward" class="control-label"></label>
+                    <input asp-for="Ward" class="form-control" />
+                    <span asp-validation-for="Ward" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="District" class="control-label"></label>
+                    <input asp-for="District" class="form-control" />
+                    <span asp-validation-for="District" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="City" class="control-label"></label>
+                    <input asp-for="City" class="form-control" />
+                    <span asp-validation-for="City" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Country" class="control-label"></label>
+                    <input asp-for="Country" class="form-control" />
+                    <span asp-validation-for="Country" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Latitude" class="control-label"></label>
+                    <input asp-for="Latitude" class="form-control" />
+                    <span asp-validation-for="Latitude" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Longitude" class="control-label"></label>
+                    <input asp-for="Longitude" class="form-control" />
+                    <span asp-validation-for="Longitude" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mt-4">
+                    <input type="submit" value="Đăng ký Nhà hàng" class="btn btn-primary" />
+                    <a asp-action="Index" asp-controller="Home" class="btn btn-secondary">Hủy</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            var showLoginModalFlag = @Html.Raw(Json.Serialize(ViewData["ShowLoginModal"] ?? false));
+            var loginReturnUrl = @Html.Raw(Json.Serialize(ViewData["LoginReturnUrl"] as string ?? Url.Action("Create", "Restaurants"))); // Lấy từ ViewData, fallback nếu null
+
+            if (showLoginModalFlag && !@User.Identity.IsAuthenticated.ToString().ToLower()) {
+                console.log("Requesting login modal to be shown. ReturnUrl: " + loginReturnUrl);
+                var urlToLoadLoginModal = "/Account/LoginModal?returnUrl=" + encodeURIComponent(loginReturnUrl);
+
+                if ($('#loginModalInstance').length === 0) {
+                    $('#loginModalPlaceholder').html('<div class="modal fade" id="loginModalInstance" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true"></div>');
+                }
+                var $modalInstance = $('#loginModalInstance');
+
+                $modalInstance.load(urlToLoadLoginModal, function () {
+                    var form = $("#loginFormModal");
+                    if (form.length && typeof $.validator !== 'undefined' && typeof $.validator.unobtrusive !== 'undefined') {
+                        form.removeData('validator');
+                        form.removeData('unobtrusiveValidation');
+                        $.validator.unobtrusive.parse(form);
+                        console.log("Validation re-parsed for #loginFormModal in Restaurants/Create.");
+                    }
+                    var modal = new bootstrap.Modal($modalInstance[0]);
+                    modal.show();
+                });
+            }
+        });
+    </script>
+}
