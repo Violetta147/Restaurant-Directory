@@ -1,5 +1,7 @@
 ﻿// Mapbox initialization and restaurant map functionality
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('search-map.js loaded');
+    
     // Initialize variables
     let map;
     let restaurantMarkers = [];
@@ -7,10 +9,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let mapMoved = false;
 
     // Get initial data
-    const initialLat = parseFloat(document.getElementById('map-initial-lat').value);
-    const initialLng = parseFloat(document.getElementById('map-initial-lng').value);
-    const initialQuery = document.getElementById('map-initial-query').value;
-    const initialCategory = document.getElementById('map-initial-category').value;
+    const initialLatElement = document.getElementById('map-initial-lat');
+    const initialLngElement = document.getElementById('map-initial-lng');
+    const initialQueryElement = document.getElementById('map-initial-query');
+    const initialCategoryElement = document.getElementById('map-initial-category');
+
+    console.log('Initial elements found:', {
+        lat: !!initialLatElement,
+        lng: !!initialLngElement,
+        query: !!initialQueryElement,
+        category: !!initialCategoryElement
+    });
+
+    if (!initialLatElement || !initialLngElement) {
+        console.error('Required map initialization elements not found');
+        return;
+    }
+
+    const initialLat = parseFloat(initialLatElement.value);
+    const initialLng = parseFloat(initialLngElement.value);
+    const initialQuery = initialQueryElement ? initialQueryElement.value : '';
+    const initialCategory = initialCategoryElement ? initialCategoryElement.value : '';
+
+    console.log('Initial values:', { initialLat, initialLng, initialQuery, initialCategory });
 
     // Initialize map
     initializeMap();
@@ -26,37 +47,81 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function initializeMap() {
-        // Initialize the map
-        mapboxgl.accessToken = document.getElementById('mapbox-token').value;
+        try {
+            // Check if Mapbox is loaded
+            if (typeof mapboxgl === 'undefined') {
+                console.error('Mapbox GL JS is not loaded');
+                return;
+            }
 
-        map = new mapboxgl.Map({
-            container: 'mapbox-container',
-            style: 'mapbox://styles/mapbox/streets-v12',
-            center: [initialLng, initialLat],
-            zoom: 13
-        });
+            // Get Mapbox token
+            const tokenElement = document.getElementById('mapbox-token');
+            if (!tokenElement || !tokenElement.value) {
+                console.error('Mapbox token not found');
+                return;
+            }
 
-        // Add navigation controls
-        map.addControl(new mapboxgl.NavigationControl());
+            // Initialize the map
+            mapboxgl.accessToken = tokenElement.value;
 
-        // Initialize map
-        map.on('load', function () {
-            // Force map to resize to fit container
-            setTimeout(() => {
-                map.resize();
-            }, 100);
+            const mapContainer = document.getElementById('mapbox-container');
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
 
-            // Add user location control with high accuracy
-            map.addControl(new mapboxgl.GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true
-                },
-                trackUserLocation: true
-            }));
+            console.log('Initializing map with center:', [initialLng, initialLat]);
 
-            // Add restaurants from the model to the map
-            loadRestaurantsFromList();
-        });
+            // Log container dimensions for debugging
+            const rect = mapContainer.getBoundingClientRect();
+            console.log('Map container dimensions:', rect.width + 'x' + rect.height);
+            console.log('Map container computed styles:', {
+                width: window.getComputedStyle(mapContainer).width,
+                height: window.getComputedStyle(mapContainer).height,
+                display: window.getComputedStyle(mapContainer).display,
+                visibility: window.getComputedStyle(mapContainer).visibility
+            });
+
+            map = new mapboxgl.Map({
+                container: 'mapbox-container',
+                style: 'mapbox://styles/mapbox/streets-v12',
+                center: [initialLng, initialLat],
+                zoom: 13
+            });
+
+            // Add navigation controls
+            map.addControl(new mapboxgl.NavigationControl());
+
+            // Initialize map
+            map.on('load', function () {
+                console.log('Map loaded successfully');
+                // Force map to resize to fit container
+                setTimeout(() => {
+                    map.resize();
+                }, 100);
+
+                // Add user location control with high accuracy
+                map.addControl(new mapboxgl.GeolocateControl({
+                    positionOptions: {
+                        enableHighAccuracy: true
+                    },
+                    trackUserLocation: true
+                }));
+
+                // Add restaurants from the model to the map
+                loadRestaurantsFromList();
+            });
+
+            map.on('error', function(e) {
+                console.error('Map error:', e);
+            });
+
+            // Add this to test if map instance is created
+            console.log('Map instance created:', !!map);
+            
+        } catch (error) {
+            console.error('Error initializing map:', error);
+        }
 
         // Setup map move events
         map.on('movestart', function () {
@@ -79,30 +144,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadRestaurantsFromList() {
-        // Clear existing markers
-        clearMarkers();
+        try {
+            console.log('Loading restaurants from list...');
+            
+            // Clear existing markers
+            clearMarkers();
 
-        // đi tìm trong trang các thẻ có class là restaurant-item tức là nhà hàng
-        // rồi lấy thông tin cần thiết từ các thẻ để tạo marker
-        const restaurantItems = document.querySelectorAll('.restaurant-item');
+            // đi tìm trong trang các thẻ có class là restaurant-item tức là nhà hàng
+            // rồi lấy thông tin cần thiết từ các thẻ để tạo marker
+            const restaurantItems = document.querySelectorAll('.restaurant-item');
+            console.log('Found restaurant items:', restaurantItems.length);
 
-        restaurantItems.forEach(item => {
-            const id = parseInt(item.dataset.id);
-            const lat = parseFloat(item.dataset.lat);
-            const lng = parseFloat(item.dataset.lng);
-            const name = item.querySelector('h3').textContent;
+            restaurantItems.forEach(item => {
+                const id = parseInt(item.dataset.id);
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
+                const slug = item.dataset.slug || '';
+                const nameElement = item.querySelector('h5.card-title') || item.querySelector('h3') || item.querySelector('.card-title');
+                const name = nameElement ? nameElement.textContent.trim() : 'Unknown Restaurant';
 
-            // Create restaurant marker
-            addRestaurantMarker(id, lat, lng, name);
-        });
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    console.log('Adding marker for:', name, lat, lng, 'slug:', slug);
+                    // Create restaurant marker
+                    addRestaurantMarker(id, lat, lng, name, '', '', slug);
+                } else {
+                    console.warn('Invalid coordinates for restaurant:', name, lat, lng);
+                }
+            });
 
-        // Fit map to show all markers if we have any
-        if (restaurantMarkers.length > 0) {
-            fitMapToMarkers();
+            console.log('Total markers added:', restaurantMarkers.length);
+
+            // Fit map to show all markers if we have any
+            if (restaurantMarkers.length > 0) {
+                fitMapToMarkers();
+            }
+        } catch (error) {
+            console.error('Error loading restaurants from list:', error);
         }
     }
 
-    function addRestaurantMarker(id, lat, lng, name, address = '', rating = '') {
+    function addRestaurantMarker(id, lat, lng, name, address = '', rating = '', slug = '') {
         // Create custom HTML element for the marker
         const el = document.createElement('div');
         el.className = 'restaurant-marker';
@@ -117,6 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
         el.style.cursor = 'pointer';
 
+        // Use slug for SEO-friendly URL or fallback to old format
+        const detailUrl = slug ? `/restaurant/${slug}` : `/Restaurant/Details/${id}`;
+
         // Create popup
         const popup = new mapboxgl.Popup({ offset: 25 })
             .setHTML(`
@@ -127,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="text-yellow-500">★</span>
                         <span class="ml-1">${rating}</span>
                     </div>` : ''}
-                    <a href="/Restaurant/Details/${id}" class="block mt-2 px-3 py-1 bg-primary text-white rounded text-sm text-center">
+                    <a href="${detailUrl}" class="block mt-2 px-3 py-1 bg-primary text-white rounded text-sm text-center">
                         View Details
                     </a>
                 </div>
@@ -145,9 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
             marker: marker,
             element: el
         });
-        //thêm sự kiện click marker
-        
-
     }
 
     function clearMarkers() {
@@ -180,8 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const lat = center.lat;
         const lng = center.lng;
 
-        // Make AJAX request to get restaurants in this area
-        fetch(`/Map/GetRestaurantsJson?lat=${lat}&lng=${lng}&radius=3.0&q=${encodeURIComponent(initialQuery)}&category=${encodeURIComponent(initialCategory)}`)
+        // Make AJAX request to get restaurants in this area - Updated to use SearchController
+        fetch(`/Search/GetRestaurantsJson?lat=${lat}&lng=${lng}&selectedDistanceCategory=3km&query=${encodeURIComponent(initialQuery)}&selectedCategory=${encodeURIComponent(initialCategory)}`)
             .then(response => response.json())
             .then(data => {
                 // Clear existing markers
@@ -196,14 +277,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         const name = feature.properties.name;
                         const address = feature.properties.address || '';
                         const rating = feature.properties.rating || '';
+                        const slug = feature.properties.slug || id; // Use slug for URL
 
                         // Add marker
-                        addRestaurantMarker(id, lat, lng, name, address, rating);
+                        addRestaurantMarker(id, lat, lng, name, address, rating, slug);
                     });
                 }
 
-                // Hide reload button
-                document.getElementById('reload-map-button').style.display = 'none';
+                // Hide reload button if it exists
+                const reloadButton = document.getElementById('reload-map-button');
+                if (reloadButton) {
+                    reloadButton.style.display = 'none';
+                }
 
                 // Reset map moved flag
                 mapMoved = false;
@@ -215,70 +300,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         // "Reload Map" button click
-        document.getElementById('reload-map-button').addEventListener('click', loadRestaurantsInMapArea);
+        const reloadButton = document.getElementById('reload-map-button');
+        if (reloadButton) {
+            reloadButton.addEventListener('click', loadRestaurantsInMapArea);
+        }
 
-        // Restaurant list item click
-        document.querySelectorAll('.restaurant-item').forEach(item => {
-            item.addEventListener('click', function () {
-                const id = parseInt(this.dataset.id);
-                const lat = parseFloat(this.dataset.lat);
-                const lng = parseFloat(this.dataset.lng);
+        // Restaurant list item click - delegate event for dynamic content
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.restaurant-item')) {
+                const item = e.target.closest('.restaurant-item');
+                const id = parseInt(item.dataset.id);
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
                 
                 // Find and open popup
                 const markerObj = restaurantMarkers.find(m => m.id === id);
                 if (markerObj) {
                     markerObj.marker.togglePopup();
                 }
-            });
-        });
-
-        // Apply filters button
-        document.getElementById('apply-filters-btn').addEventListener('click', function () {
-            // Get selected filters
-            const selectedCategories = Array.from(document.querySelectorAll('.category-checkbox:checked'))
-                .map(cb => cb.value).join(',');
-
-            const selectedRating = document.querySelector('.rating-radio:checked')?.value || '';
-
-            const selectedPrices = Array.from(document.querySelectorAll('.price-filter.active'))
-                .map(btn => btn.dataset.price).join(',');
-
-            // Build URL with filters
-            let url = '/Search/Index?';
-
-            if (initialQuery) {
-                url += `q=${encodeURIComponent(initialQuery)}&`;
-            }
-
-            if (document.querySelector('.location-input')?.value) {
-                url += `location=${encodeURIComponent(document.querySelector('.location-input').value)}&`;
-            }
-
-            if (selectedCategories) {
-                url += `category=${encodeURIComponent(selectedCategories)}&`;
-            }
-
-            if (selectedRating) {
-                url += `rating=${encodeURIComponent(selectedRating)}&`;
-            }
-
-            if (selectedPrices) {
-                url += `price=${encodeURIComponent(selectedPrices)}&`;
             }
         });
 
-        // Price filter toggle
-        document.querySelectorAll('.price-filter').forEach(btn => {
-            btn.addEventListener('click', function () {
-                this.classList.toggle('active');
-                if (this.classList.contains('active')) {
-                    this.style.backgroundColor = '#FF6E40';
-                    this.style.color = 'white';
-                } else {
-                    this.style.backgroundColor = 'white';
-                    this.style.color = 'inherit';
-                }
-            });
-        });
+        // Apply filters button - REMOVED CONFLICTING JAVASCRIPT
+        // The HTML form now handles filter submission naturally via type="submit"
+        // No JavaScript intervention needed - ASP.NET model binding handles everything
+        
+        // Price filter toggle - REMOVED (not used in actual HTML form)
     }
+
+    // Expose loadRestaurantsFromList globally for AJAX callback
+    window.loadRestaurantsFromList = loadRestaurantsFromList;
 });

@@ -33,10 +33,8 @@ body.search-page #map-section {
     width: 40% !important;
     flex: none !important;
     padding-right: 15px !important;
-    position: sticky;
-    top: 20px;
-    height: calc(100vh - 100px);
-    align-self: flex-start;
+    position: relative; /* Changed from sticky to relative */
+    min-height: 600px !important;
     display: flex !important;
     flex-direction: column !important;
 }
@@ -44,10 +42,12 @@ body.search-page #map-section {
 /* Map container specific for search page */
 body.search-page #mapbox-container {
     width: 100% !important;
-    height: 100% !important;
-    flex: 1 !important;
+    height: 600px !important;
     border-radius: 8px;
-    min-height: calc(100vh - 120px) !important;
+    border: 2px solid #007bff; /* Debug border to see container */
+    background-color: #f8f9fa;
+    position: relative !important;
+    display: block !important;
 }
 
 /* Mapbox GL specific styles for search page */
@@ -173,6 +173,42 @@ body.search-page #mapbox-container .mapboxgl-canvas {
     padding: 15px;
 }
 
+/* Button styles */
+.btn-primary {
+    background-color: #FF6E40;
+    border-color: #FF6E40;
+}
+
+.btn-primary:hover {
+    background-color: #E85D30;
+    border-color: #E85D30;
+}
+
+/* Pagination styles - fix current page highlighting */
+.pagination .page-item.active .page-link {
+    background-color: #FF6E40;
+    border-color: #FF6E40;
+    color: white;
+    font-weight: bold;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link {
+    color: #FF6E40;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link:hover {
+    color: #E85D30;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
 /* Responsive layout */
 @media (max-width: 992px) {
     #main-frame {
@@ -258,15 +294,4 @@ body.search-page #mapbox-container .mapboxgl-canvas {
 .form-select, .form-control {
     border-radius: 4px;
     border: 1px solid #ddd;
-}
-
-/* Button styles */
-.btn-primary {
-    background-color: #FF6E40;
-    border-color: #FF6E40;
-}
-
-.btn-primary:hover {
-    background-color: #E85D30;
-    border-color: #E85D30;
 }

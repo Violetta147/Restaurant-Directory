@@ -180,7 +180,10 @@ namespace PBL3.Repositories
             if (isOpenNow)
             {
                 var now = DateTime.Now.TimeOfDay;
-                query = query.Where(r => r.OpeningTime <= now && r.ClosingTime >= now);
+                query = query.Where(r => r.OpeningTime.HasValue && r.ClosingTime.HasValue &&
+                    (r.ClosingTime.Value < r.OpeningTime.Value
+                        ? now >= r.OpeningTime.Value || now <= r.ClosingTime.Value  // Overnight hours
+                        : now >= r.OpeningTime.Value && now <= r.ClosingTime.Value)); // Same day hours
             }
 
             return query;

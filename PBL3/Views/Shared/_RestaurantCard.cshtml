@@ -1,6 +1,10 @@
 @model PBL3.ViewModels.Search.RestaurantViewModel
 
-<div class="restaurant-card card h-100 shadow-sm restaurant-item" data-id="@Model.Id">
+<div class="restaurant-card card h-100 shadow-sm restaurant-item" 
+     data-id="@Model.Id" 
+     data-lat="@Model.Latitude" 
+     data-lng="@Model.Longitude"
+     data-slug="@Model.Slug">
     <div class="row g-0 align-items-center">
         <div class="col-auto">
             <img src="@Model.ImageUrl" class="rounded-start" alt="@Model.Name" style="width: 70px; height: 70px; object-fit: cover;">

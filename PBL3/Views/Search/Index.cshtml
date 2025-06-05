@@ -81,17 +81,18 @@
                                     </select>
                                 </div>
                                 
-                                <!-- Other Filters (Example: IsOpenNow) -->
+                                <!-- Other Filters (IsOpenNow) -->
                                 <div class="col-12 mb-3">
                                     <div class="form-check">
-                                        <input asp-for="IsOpenNow" class="form-check-input" />
-                                        <label asp-for="IsOpenNow" class="form-check-label">Đang mở cửa</label>
+                                        <input type="checkbox" id="isOpenNowCheck" class="form-check-input" @(Model.IsOpenNow ? "checked" : "") />
+                                        <label for="isOpenNowCheck" class="form-check-label">Đang mở cửa</label>
+                                        <input type="hidden" name="isOpenNow" id="isOpenNowHidden" value="@(Model.IsOpenNow.ToString().ToLower())" />
                                     </div>
                                 </div>
 
                                 <div class="col-12">
                                     <div class="d-grid w-100">
-                                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-filter me-2"></i>Áp dụng bộ lọc</button>
+                                        <button type="submit" id="apply-filters-btn" class="btn btn-primary btn-sm"><i class="bi bi-filter me-2"></i>Áp dụng bộ lọc</button>
                                     </div>
                                 </div>
                             </form>
@@ -110,7 +111,17 @@
                                 <h5 class="mb-0">
                                     @if (!hasRestaurants)
                                     {
-                                        <span class="fw-bold">Không tìm thấy kết quả nào cho "@Model.Query" tại @Model.Location</span>
+                                        <span class="fw-bold">
+                                            Không tìm thấy kết quả nào
+                                            @if (!string.IsNullOrEmpty(Model.Query))
+                                            {
+                                                <text> cho "@Model.Query"</text>
+                                            }
+                                            @if (!string.IsNullOrEmpty(Model.Location))
+                                            {
+                                                <text> tại @Model.Location</text>
+                                            }
+                                        </span>
                                     }
                                     else
                                     {
@@ -129,6 +140,10 @@
                                         @if (!string.IsNullOrEmpty(Model.Location))
                                         {
                                             <span class="text-secondary"> gần @Model.Location</span>
+                                        }
+                                        else if (string.IsNullOrEmpty(Model.Query) && string.IsNullOrEmpty(Model.SelectedCategory))
+                                        {
+                                            <span class="text-secondary"> trong vùng @(Model.SelectedDistanceCategory == "3km" ? "3km" : Model.SelectedDistanceCategory)</span>
                                         }
                                     }
                                 </h5>
@@ -155,7 +170,7 @@
 
                                 <!-- Pagination -->
                                 <div class="mt-4 d-flex justify-content-center">
-                                    @Html.PagedListPager(Model.Restaurants, page => "#", 
+                                    @Html.PagedListPager(Model.Restaurants, page => $"javascript:loadPage({page})", 
                                     new PagedListRenderOptions {
                                         LiElementClasses = new[] { "page-item" },
                                         PageClasses = new[] { "page-link" },
@@ -164,16 +179,7 @@
                                         DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
                                         DisplayLinkToNextPage = PagedListDisplayMode.Always,
                                         MaximumPageNumbersToDisplay = 5,
-                                        UlElementClasses = new[] { "pagination", "pagination-sm" },
-                                        FunctionToTransformEachPageLink = (liTag, aTag) => {
-                                            // Thêm sự kiện click vào mỗi link phân trang
-                                            aTag.Attributes.Add("onclick", "loadPage(event, this)");
-                                            var pageNumber = aTag.InnerHtml.ToString().Trim();
-                                            aTag.Attributes.Add("data-page", pageNumber);
-                                            liTag.InnerHtml.Clear();
-                                            liTag.InnerHtml.AppendHtml(aTag);
-                                            return liTag;
-                                        }
+                                        UlElementClasses = new[] { "pagination", "pagination-sm" }
                                     })
                                 </div>
                             }
@@ -184,44 +190,80 @@
 
             <!-- Right Section: Map -->
             <div id="map-section">
-                <div id="mapbox-container"></div> 
+                <div class="position-relative">
+                    <button id="reload-map-button" class="btn btn-light btn-sm" style="display: none;">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Tải lại bản đồ
+                    </button>
+                    <div id="mapbox-container" style="width: 100%; height: 600px; border: 2px solid #ddd; background-color: #f8f9fa;"></div>
+                </div>
             </div>
         </div>
     </div>
 
 @section Scripts {
     <script>
-        function loadPage(event, element) {
-            event.preventDefault();
+        // Handle checkbox to avoid duplicate isOpenNow parameters
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkbox = document.getElementById('isOpenNowCheck');
+            const hiddenField = document.getElementById('isOpenNowHidden');
             
-            // Lấy số trang từ thuộc tính data-page
-            const page = element.getAttribute('data-page');
-            if (!page) return;
+            // Sync hidden field when checkbox changes
+            checkbox.addEventListener('change', function() {
+                hiddenField.value = this.checked ? 'true' : 'false';
+            });
+        });
 
+        // Global function for pagination
+        window.loadPage = function(pageNumber) {
+            console.log('loadPage called with page:', pageNumber);
+            
             // Lấy các tham số tìm kiếm hiện tại
             const params = new URLSearchParams(window.location.search);
             
             // Cập nhật tham số trang
-            params.set('page', page);
+            params.set('page', pageNumber);
+            
+            console.log('Requesting URL:', `/Search/GetRestaurants?${params.toString()}`);
             
             // Hiển thị loading
             const restaurantList = document.getElementById('restaurant-list');
-            restaurantList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            if (restaurantList) {
+                restaurantList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            }
             
             // Gửi yêu cầu AJAX
             fetch(`/Search/GetRestaurants?${params.toString()}`)
-                .then(response => response.text())
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
                 .then(html => {
+                    console.log('Received HTML length:', html.length);
                     // Cập nhật nội dung danh sách nhà hàng
-                    restaurantList.innerHTML = html;
+                    if (restaurantList) {
+                        restaurantList.innerHTML = html;
+                    }
                     
                     // Cập nhật URL mà không tải lại trang
                     const newUrl = `${window.location.pathname}?${params.toString()}`;
                     window.history.pushState({ path: newUrl }, '', newUrl);
+                    
+                    // Reload restaurants on map after AJAX update
+                    if (typeof loadRestaurantsFromList === 'function') {
+                        console.log('Calling loadRestaurantsFromList');
+                        loadRestaurantsFromList();
+                    } else {
+                        console.warn('loadRestaurantsFromList function not found');
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    restaurantList.innerHTML = '<div class="alert alert-danger">Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.</div>';
+                    if (restaurantList) {
+                        restaurantList.innerHTML = '<div class="alert alert-danger">Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.</div>';
+                    }
                 });
         }
     </script>

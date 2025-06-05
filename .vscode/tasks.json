@@ -2,40 +2,45 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "args": [
+                "test",
+                "PBL3.PlaywrightTests",
+                "--logger",
+                "html",
+                "--no-build"
+            ],
+            "problemMatcher": [],
+            "isBackground": false,
+            "label": "Test: Generate HTML Report",
+            "type": "shell",
+            "command": "dotnet",
+            "group": "test"
+        },
+        {
             "label": "build",
             "command": "dotnet",
-            "type": "process",
+            "type": "shell",
             "args": [
                 "build",
-                "${workspaceFolder}/First.sln",
+                "${workspaceFolder}/PBL3/PBL3.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+                "/consoleloggerparameters:NoSummary"
             ],
+            "group": "build",
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "run",
             "command": "dotnet",
-            "type": "process",
+            "type": "shell",
             "args": [
-                "publish",
-                "${workspaceFolder}/First.sln",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary;ForceNoAlign"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "watch",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/First.sln"
+                "${workspaceFolder}/PBL3/PBL3.csproj"
             ],
-            "problemMatcher": "$msCompile"
+            "group": "build",
+            "isBackground": true,
+            "problemMatcher": []
         }
     ]
 }

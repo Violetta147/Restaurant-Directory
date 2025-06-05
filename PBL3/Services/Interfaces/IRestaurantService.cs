@@ -3,6 +3,7 @@ using PBL3.ViewModels.Search;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using X.PagedList;
+using static PBL3.ViewModels.Search.SearchConstants;
 
 namespace PBL3.Services.Interfaces
 {
@@ -19,7 +20,7 @@ namespace PBL3.Services.Interfaces
             double? lat = null,
             double? lng = null,
             double? actualRadiusKm = null,
-            string selectedSortOption = SearchConstants.Sort_Relevance_Value,
+            string? selectedSortOption = null, // Will default to Relevance
             double? minRating = null,
             string priceRange = "",
             bool isOpenNow = false);
@@ -32,7 +33,7 @@ namespace PBL3.Services.Interfaces
             double lng,
             string searchTerm = "",
             string selectedCategory = "",
-            string selectedDistanceCategory = SearchConstants.Distance_BirdseyeView_Value,
+            string? selectedDistanceCategory = null, // Will default to BirdseyeView
             double? minRating = null,
             string priceRange = "",
             bool isOpenNow = false);
@@ -62,5 +63,11 @@ namespace PBL3.Services.Interfaces
         /// Lấy danh sách các danh mục nhà hàng duy nhất
         /// </summary>
         Task<List<string>> GetUniqueRestaurantCategoriesAsync();
+        
+        /// <summary>
+        /// Xử lý và chuẩn hóa các tham số tìm kiếm với các giá trị mặc định phù hợp
+        /// </summary>
+        (string processedQuery, string processedLocation, string processedDistanceCategory, double? processedLat, double? processedLng, int validatedPage) 
+        ProcessSearchParameters(string query, string location, string selectedDistanceCategory, double? lat, double? lng, int page = 1);
     }
 }

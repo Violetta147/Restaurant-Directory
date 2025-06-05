@@ -30,23 +30,11 @@ namespace PBL3.ViewModels.Search
 
         // Distance Filter
         public string SelectedDistanceCategory { get; set; } = SearchConstants.Distance_BirdseyeView_Value; // Default value
-        public List<SelectListItem> DistanceOptions { get; set; } = new List<SelectListItem>
-        {
-            new SelectListItem { Value = SearchConstants.Distance_BirdseyeView_Value, Text = SearchConstants.Distance_BirdseyeView_Text },
-            new SelectListItem { Value = SearchConstants.Distance_1km_Value, Text = SearchConstants.Distance_1km_Text },
-            new SelectListItem { Value = SearchConstants.Distance_3km_Value, Text = SearchConstants.Distance_3km_Text },
-            new SelectListItem { Value = SearchConstants.Distance_5km_Value, Text = SearchConstants.Distance_5km_Text },
-            new SelectListItem { Value = SearchConstants.Distance_10km_Value, Text = SearchConstants.Distance_10km_Text }
-        };
+        public List<SelectListItem> DistanceOptions { get; set; } = SearchConstants.DistanceOptions;
 
         // Sort Options
         public string SelectedSortOption { get; set; } = SearchConstants.Sort_Relevance_Value; // Default value
-        public List<SelectListItem> SortOptions { get; set; } = new List<SelectListItem>
-        {
-            new SelectListItem { Value = SearchConstants.Sort_Relevance_Value, Text = SearchConstants.Sort_Relevance_Text },
-            new SelectListItem { Value = SearchConstants.Sort_Distance_Value, Text = SearchConstants.Sort_Distance_Text },
-            new SelectListItem { Value = SearchConstants.Sort_Rating_Value, Text = SearchConstants.Sort_Rating_Text },
-        };
+        public List<SelectListItem> SortOptions { get; set; } = SearchConstants.SortOptions;
         
         // SearchMode (có thể vẫn giữ lại nếu muốn có logic tìm kiếm khác nhau ở backend)
         public SearchMode SearchMode { get; set; } = SearchMode.Natural; 
