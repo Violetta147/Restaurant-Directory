@@ -51,12 +51,19 @@
       top: 20px;
       overflow-y: auto;
       /* Cho phép cuộn */
-  }
-  /* Restaurant list column - right side of left section */
+  }  /* Restaurant list column - right side of left section */
   #restaurants-column {
       flex: 1 !important;
-      overflow-y: hidden; /* Remove scrollbar */
+      display: flex !important;
+      flex-direction: column !important;
+      overflow-y: auto !important; /* Enable scrollbar */
       padding-right: 15px;
+  }
+  
+  /* Restaurant list - scrollable container */
+  #restaurant-list {
+      flex-grow: 1 !important;
+      overflow-y: auto !important;
   }
   
   /* Style for restaurant cards inside restaurants-column */

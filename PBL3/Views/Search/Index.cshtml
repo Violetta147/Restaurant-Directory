@@ -1,6 +1,7 @@
-@model SearchViewModel
+@model PBL3.ViewModel.SearchViewModel
+
 @{
-    ViewData["Title"] = $"TOP 10 BEST {(!string.IsNullOrEmpty(Model.SearchTerm) ? Model.SearchTerm : "Restaurants")} in {(!string.IsNullOrEmpty(Model.Address) ? Model.Address : "Da Nang")} - FISHLOOT";
+    ViewData["Title"] = "Search";
     ViewData["BodyClass"] = "search-page";
 }
 
@@ -10,10 +11,9 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">    
     <!-- Custom CSS-->
-    <link rel="stylesheet" href="~/css/restaurant-card.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/restaurant-card-new.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/search-results.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/restaurant-ui-improvements.css" asp-append-version="true">
-    <link rel="stylesheet" href="~/css/restaurant-card-fixes.css" asp-append-version="true">
 }
 
 <!-- Hidden fields to pass data to JavaScript -->
@@ -106,22 +106,24 @@
                          </select>
                      </form>
                  }
-            </div>
-
-            <!-- Restaurant List -->
+            </div>            <!-- Restaurant List -->
              @if (hasRestaurants) {
                 <div id="restaurant-list">
                     @await Html.PartialAsync("_RestaurantCardPartial", Model.RestaurantCards)
-                </div>                <!-- Pagination -->
-                @if (Model.RestaurantCards != null && Model.RestaurantCards.PageCount > 1) {
-                    <nav aria-label="Pagination" class="mt-4 d-flex justify-content-center pagination-container">
-                       <ul class="pagination">
-                           @if (Model.RestaurantCards.HasPreviousPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber - 1))">«</a></li> }
-                           @for (int i = 1; i <= Model.RestaurantCards.PageCount; i++) { <li class="page-item @(i == Model.RestaurantCards.PageNumber ? "active" : "")" data-page="@i"><a class="page-link" href="javascript:loadPage(@i)">@i</a></li> }
-                           @if (Model.RestaurantCards.HasNextPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber + 1))">»</a></li> }
-                       </ul>
-                    </nav>
-                }
+                </div>
+                
+                <!-- Pagination - Always visible container -->
+                <div class="pagination-container">
+                    @if (Model.RestaurantCards != null && Model.RestaurantCards.PageCount > 1) {
+                        <nav aria-label="Pagination">
+                           <ul class="pagination">
+                               @if (Model.RestaurantCards.HasPreviousPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber - 1))">«</a></li> }
+                               @for (int i = 1; i <= Model.RestaurantCards.PageCount; i++) { <li class="page-item @(i == Model.RestaurantCards.PageNumber ? "active" : "")" data-page="@i"><a class="page-link" href="javascript:loadPage(@i)">@i</a></li> }
+                               @if (Model.RestaurantCards.HasNextPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber + 1))">»</a></li> }
+                           </ul>
+                        </nav>
+                    }
+                </div>
              } else {
                 <div class="text-center p-5 bg-light rounded">
                     <p>Không tìm thấy nhà hàng nào phù hợp với tìm kiếm của bạn.</p>
@@ -359,5 +361,4 @@
     <!-- Mapbox GL JS -->
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
     <script src="~/js/search/search-map.js" asp-append-version="true"></script>
-    <script src="~/js/pagination-fixes.js" asp-append-version="true"></script>
 }

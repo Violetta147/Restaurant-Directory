@@ -1,4 +1,5 @@
 @model IEnumerable<PBL3.ViewModel.RestaurantCardViewModel>
+@using PBL3.Models
 
 @foreach (var restaurant in Model)
 {
@@ -11,7 +12,7 @@
                 <div class="col-auto">
                     <img src="@restaurant.CardImageUrl" class="rounded-start" alt="@restaurant.Name" style="width: 90px; height: 90px; object-fit: cover;">
                 </div>
-                <div class="col ps-2">
+                <div class="col ps-2 pe-5">
                     <!-- Restaurant Name -->
                     <h5 class="card-title fw-bold mb-1 text-truncate">@restaurant.Name</h5>
                     
@@ -123,13 +124,14 @@
                     {
                         <div class="mb-1 small description-area">@restaurant.Name kính chào bạn</div>
                     }
-                    
-                    <div class="view-details-btn">
-                        <a href="/Restaurant/@restaurant.Id" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye me-1"></i> Xem chi tiết
-                        </a>
-                    </div>
                 </div>
+            </div>
+            
+            <!-- Button positioned at bottom right -->
+            <div class="d-grid position-absolute bottom-0 end-0 m-2">
+                <a href="/Restaurant/@restaurant.Id" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-eye me-1"></i> Xem chi tiết
+                </a>
             </div>
         </div>
     </div>

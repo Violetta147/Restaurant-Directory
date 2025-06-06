@@ -1,8 +1,0 @@
-@model IPagedList<PBL3.ViewModels.Search.RestaurantViewModel>
-
-@foreach (var restaurant in Model)
-{
-    <div class="col">
-        <partial name="_RestaurantCard" model="restaurant" />
-    </div>
-}
