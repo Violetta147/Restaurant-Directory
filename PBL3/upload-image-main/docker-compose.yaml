@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: haduckien
+      MYSQL_DATABASE: TRAINNING
+      MYSQL_USER: haduckien
+      MYSQL_PASSWORD: haduckien
+    ports:
+      - "3308:3306"
+    restart: always

@@ -1,0 +1,297 @@
+/* Search page specific body styles */
+body.search-page {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure full width layout for search page */
+.search-page .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+}
+
+/* Main frame layout override for search page */
+body.search-page #main-frame {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Left section layout for search page */
+body.search-page #left-section {
+    display: flex !important;
+    width: 60% !important;
+    flex: none !important;
+    padding-left: 15px !important;
+}
+
+/* Map section layout for search page */
+body.search-page #map-section {
+    width: 40% !important;
+    flex: none !important;
+    padding-right: 15px !important;
+    position: relative; /* Changed from sticky to relative */
+    min-height: 600px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Map container specific for search page */
+body.search-page #mapbox-container {
+    width: 100% !important;
+    height: 600px !important;
+    border-radius: 8px;
+    border: 2px solid #007bff; /* Debug border to see container */
+    background-color: #f8f9fa;
+    position: relative !important;
+    display: block !important;
+}
+
+/* Mapbox GL specific styles for search page */
+body.search-page #mapbox-container .mapboxgl-map {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+body.search-page #mapbox-container .mapboxgl-canvas-container {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+body.search-page #mapbox-container .mapboxgl-canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Main frame layout - contains left and right sections */
+#main-frame {
+    display: flex !important;
+    min-height: calc(100vh - 120px);
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+}
+
+#main-frame .row {
+    width: 100% !important;
+    margin: 0 !important;
+    flex: 1;
+    display: flex;
+}
+
+/* Support for both .row and .d-flex structure */
+#main-frame .d-flex {
+    width: 100% !important;
+    margin: 0 !important;
+    flex: 1;
+    display: flex !important;
+}
+
+/* Left section - contains filters and restaurants columns */
+#left-section {
+    display: flex !important;
+    width: 60% !important;
+    padding-left: 15px !important;
+    flex: none !important;
+    max-width: 60% !important;
+}
+
+/* Filters column - left side of left section */
+#filters-column {
+    width: 250px !important;
+    min-width: 250px !important;
+    max-width: 250px !important;
+    background-color: white;
+    padding: 1rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 20px; /* Match this with the map section's top value */
+    height: calc(100vh - 100px);
+    align-self: flex-start;
+    overflow-y: auto; /* Allow scrolling within the filters if content is too tall */
+    flex: none !important;
+}
+
+/* Restaurant list column - right side of left section */
+#restaurants-column {
+    flex: 1 !important;
+    padding: 0 1.5rem !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+/* Map section - right section */
+#map-section {
+    width: 40% !important;
+    padding-right: 15px !important;
+    flex: none !important;
+    max-width: 40% !important;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 100px);
+    align-self: flex-start;
+}
+
+#mapbox-container {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 8px;
+    min-height: calc(100vh - 120px) !important;
+}
+
+#reload-map-button {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 8px 16px;
+    border-radius: 4px;
+    display: none;
+}
+
+.restaurant-item {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.restaurant-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.restaurant-marker {
+    cursor: pointer;
+}
+
+.mapboxgl-popup-content {
+    padding: 15px;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #FF6E40;
+    border-color: #FF6E40;
+}
+
+.btn-primary:hover {
+    background-color: #E85D30;
+    border-color: #E85D30;
+}
+
+/* Pagination styles - fix current page highlighting */
+.pagination .page-item.active .page-link {
+    background-color: #FF6E40;
+    border-color: #FF6E40;
+    color: white;
+    font-weight: bold;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link {
+    color: #FF6E40;
+    border-color: #dee2e6;
+}
+
+.pagination .page-link:hover {
+    color: #E85D30;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+/* Responsive layout */
+@media (max-width: 992px) {
+    #main-frame {
+        flex-direction: column !important;
+    }
+    
+    #main-frame .d-flex {
+        flex-direction: column !important;
+    }
+    
+    #left-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-direction: column !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+    
+    #filters-column {
+        width: 100% !important;
+        max-width: 100% !important;
+        position: static !important;
+        height: auto !important;
+        margin-bottom: 1rem !important;
+        position: static;
+        height: auto;
+        margin-bottom: 1rem;
+    }
+    
+    #restaurants-column {
+        padding: 0;
+    }
+    
+    #map-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        position: static !important;
+        height: 400px !important;
+        margin-top: 1rem !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #main-frame {
+        padding: 0 10px !important;
+    }
+    
+    #left-section {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    #map-section {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+
+/* Override Bootstrap column padding for better alignment */
+.col-md-3, .col-md-9, .col-lg-8, .col-lg-4 {
+    padding: 0;
+}
+
+/* Card styles to match the yelp layout */
+.card {
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: white;
+    padding: 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.card-body {
+    padding: 15px;
+}
+
+/* Form control styles to match yelp */
+.form-select, .form-control {
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}

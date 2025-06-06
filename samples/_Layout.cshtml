@@ -1,0 +1,125 @@
+    @using Microsoft.AspNetCore.Identity
+    @using PBL3.Models
+
+
+    @inject SignInManager<AppUser> SignInManager
+    @inject UserManager<AppUser> UserManager
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="mapbox-token" content="@ViewData["MapboxToken"]" /> @* Ensure ViewData["MapboxToken"] is populated globally or by relevant actions *@
+        <title>@ViewData["Title"] - PBL3</title>
+        @* <script type="importmap"></script> *@ @* Thường không cần thiết với Bootstrap 5 và jQuery truyền thống *@
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/nav-bar.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/PBL3.styles.css" asp-append-version="true" />
+        <!-- Font Awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        @await RenderSectionAsync("Styles", required: false)
+    </head>
+    <body class="@ViewData["BodyClass"]">
+         <!-- Thêm một div wrapper với display: flex -->
+        <div class="page-wrapper" style="display: flex; flex-direction: column; min-height: 100vh;">
+        <header>
+            <nav class="fishloot-navbar">
+                <div class="container-fluid">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                            <img src="~/images/trans_bg.png" alt="fishloot" class="fishloot-logo" onerror="this.src='/api/placeholder/120/36'; this.onerror=null;">
+                            <span class="fishloot-name">FISHLOOT</span>
+                        </a>
+
+                        @* Thay đổi logo và tên ở đây *@
+                        <form action="@Url.Action("Index", "Search")" method="get" class="fishloot-search-container" id="navbarSearchForm" autocomplete="off">
+                            <div class="search-inputs-group">
+                                <input type="text" name="query" class="fishloot-search-input" autocomplete="off" placeholder="Kinda Hungry huh? Go loot some fishes!" />
+                                <div class="location-input-container">
+                                    <input type="text" name="randomloc-283756" id="navbarLocationInput" class="fishloot-search-location" autocomplete="off" placeholder="Even how large the ocean are, we can still reach you" />
+                                    <div id="location-suggestion" class="location-dropdown">
+                                        <button type="button" id="navbarUseCurrentLocation" class="dropdown-item"><i class="fas fa-map-marker-alt"></i> Sử dụng vị trí hiện tại</button>
+                                    </div>
+                                </div>
+                                <button class="fishloot-search-button" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" name="lat" id="navbarLat" />
+                            <input type="hidden" name="lng" id="navbarLng" />
+                        </form>
+
+                        <div class="fishloot-nav-links">
+                            <a href="#" class="fishloot-nav-link">Loot your business</a>
+                            <a href="#" class="fishloot-nav-link">Write a Review</a>
+                            <a href="#" class="fishloot-nav-link">Start a Project</a>
+
+                            @if (SignInManager.IsSignedIn(User))
+                            {
+                                <span class="fishloot-nav-link">Hello @UserManager.GetUserName(User)!</span>
+                                <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="fishloot-logout-button">Logout</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <button type="button"
+                                        class="fishloot-login-button"
+                                        id="loginModalButton"> @* THAY ĐỔI Ở ĐÂY *@
+                                    Log In
+                                </button>
+                                <button type="button"
+                                        class="fishloot-signup-button"
+                                        id="registerModalButton">
+                                    @* THAY ĐỔI Ở ĐÂY *@
+                                    Đăng ký
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+         <!-- Main content sẽ tự động co giãn để lấp đầy không gian -->
+        <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
+        @if (ViewData["BodyClass"]?.ToString() == "search-page")
+        {
+            <main role="main" class="pb-3" style="padding: 0; margin: 0;">
+                @RenderBody()
+            </main>
+        }
+        else
+        {
+            <div class="container">
+                <main role="main" class="pb-3">
+                    @RenderBody()
+                </main>
+            </div>
+        }
+        </div>
+
+
+        <footer class="border-top footer text-muted" style="flex-shrink: 0;">
+            <div class="container">
+                © 2025 - PBL3 - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            </div>
+        </footer>
+        </div> <!-- Kết thúc page-wrapper -->
+        <!-- Modal Placeholder-->
+        <div id="loginModalPlaceholder"></div>
+        <div id="registerModalPlaceholder"></div>
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        <script src="~/js/location-handler.js" asp-append-version="true"></script>
+
+        @* Script để parse validation cho form trong modal nếu dùng jQuery Unobtrusive Validation *@
+        <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+        <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.js"></script>
+
+        @await RenderSectionAsync("Scripts", required: false)
+    </body>
+    </html>

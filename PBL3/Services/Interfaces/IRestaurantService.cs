@@ -1,15 +1,22 @@
 ﻿using PBL3.Models;
+using X.PagedList;
 
 namespace PBL3.Services.Interfaces
 {
     public interface IRestaurantService
     {
-        // --- Chức năng cho người dùng (User) ---
-
-        /// <summary>
+        // --- Chức năng cho người dùng (User) ---        /// <summary>
         /// Lấy danh sách tất cả các nhà hàng đang hoạt động.
         /// </summary>
         Task<IEnumerable<Restaurant>> GetRestaurantsAsync();
+
+        /// <summary>
+        /// Lấy danh sách tất cả các nhà hàng đang hoạt động với phân trang.
+        /// </summary>
+        /// <param name="pageNumber">Số trang.</param>
+        /// <param name="pageSize">Số lượng kết quả trên mỗi trang.</param>
+        /// <returns>Danh sách nhà hàng với phân trang.</returns>
+        Task<IPagedList<Restaurant>> GetAllRestaurantsPaginatedAsync(int pageNumber = 1, int pageSize = 10);
 
         /// <summary>
         /// Lấy chi tiết thông tin của một nhà hàng dựa trên ID.
@@ -28,9 +35,8 @@ namespace PBL3.Services.Interfaces
         /// <param name="maxPrice">Giá tối đa để lọc.</param>
         /// <param name="sortBy">Tiêu chí sắp xếp (ví dụ: "rating", "price", "name").</param>
         /// <param name="pageNumber">Số trang (cho phân trang).</param>
-        /// <param name="pageSize">Số lượng kết quả trên mỗi trang (cho phân trang).</param>
-        /// <returns>Danh sách nhà hàng phù hợp với tiêu chí tìm kiếm/lọc.</returns>
-        Task<IEnumerable<Restaurant>> SearchRestaurantsAsync(
+        /// <param name="pageSize">Số lượng kết quả trên mỗi trang (cho phân trang).</param>        /// <returns>Danh sách nhà hàng phù hợp với tiêu chí tìm kiếm/lọc.</returns>
+        Task<IPagedList<Restaurant>> SearchRestaurantsAsync(
             string? searchTerm = null,
             IEnumerable<int>? cuisineTypeIds = null,
             IEnumerable<int>? tagIds = null,
@@ -39,19 +45,17 @@ namespace PBL3.Services.Interfaces
             string? sortBy = null, // Có thể dùng enum thay vì string cho sortBy
             int pageNumber = 1,
             int pageSize = 10
-        );
-        // Location-based search
-        Task<IEnumerable<Restaurant>> SearchRestaurantsByLocationAsync(
+        );        // Location-based search
+        Task<IPagedList<Restaurant>> SearchRestaurantsByLocationAsync(
                 string? addressQuery,
                 double? latitude = null,
                 double? longitude = null,
                 double? radiusInKm = 5.0,
                 int pageNumber = 1,
                 int pageSize = 10
-            );
-            
+            );            
         //Combined search (term + location)
-            Task<IEnumerable<Restaurant>> SearchRestaurantsAdvancedAsync(
+            Task<IPagedList<Restaurant>> SearchRestaurantsAdvancedAsync(
                 string? searchTerm = null,
                 string? addressQuery = null,
                 double? latitude = null,

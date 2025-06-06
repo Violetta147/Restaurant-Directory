@@ -1,0 +1,182 @@
+  body.search-page {
+      margin: 0 !important;
+      padding: 0 !important;
+      padding-bottom: 0 !important; /* Đảm bảo không có padding-bottom */
+      background-color: #f8f9fa;
+  }
+      
+  /* Ghi đè footer cho search page */
+  body.search-page .footer {
+      margin-top: 0 !important;
+  }/* Main frame layout - sẽ co giãn để lấp đầy không gian */
+  #main-frame {
+      display: flex !important;
+      flex: 1 1 auto;
+      /* Quan trọng: Cho phép nó co giãn lấp đầy không gian */
+      padding: 20px 0 0 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+      overflow: hidden;
+      /* Ngăn nội dung tràn ra ngoài */
+      min-height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
+  }
+
+  /* Left section layout */
+  #left-section {
+      display: flex !important;
+      width: 60% !important;
+      flex: none !important;
+      padding-left: 15px !important;
+      flex-direction: row !important;
+      gap: 15px;
+  }  /* --- THAY ĐỔI QUAN TRỌNG Ở ĐÂY --- */
+  /* Tính chiều cao cho các panel, tính cả khoảng cách footer */
+  #filters-column,
+  #restaurants-column {
+      height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
+      max-height: calc(100vh - 80px); /* Điều chỉnh max-height tương ứng */
+  }
+
+  #map-section {
+      height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
+      max-height: calc(100vh - 80px); /* Điều chỉnh max-height tương ứng */
+  }
+
+  /* Filters column - left side of left section */
+  #filters-column {
+      width: 280px !important;
+      min-width: 280px !important;
+      align-self: flex-start;
+      position: sticky;
+      top: 20px;
+      overflow-y: auto;
+      /* Cho phép cuộn */
+  }
+  /* Restaurant list column - right side of left section */
+  #restaurants-column {
+      flex: 1 !important;
+      overflow-y: hidden; /* Remove scrollbar */
+      padding-right: 15px;
+  }
+  
+  /* Style for restaurant cards inside restaurants-column */
+  #restaurants-column .restaurant-card {
+      width: 100%; /* Increase the width of the restaurant card */
+  }
+
+  /* Map section - right section */
+  #map-section {
+      width: 40% !important;
+      flex: none !important;
+      padding-right: 15px !important;
+      align-self: flex-start;
+      position: sticky;
+      top: 20px;
+  }  #mapbox-container {
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 8px;
+      min-height: 600px; /* Fallback minimum height */
+      max-height: calc(100vh - 100px); /* Điều chỉnh để gần hơn với footer */
+  }
+
+  /* ... các style khác như .pagination, .restaurant-card-highlighted giữ nguyên ... */
+  .restaurant-card-highlighted {
+      border: 2px solid #0d6efd !important;
+      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15) !important;
+      background-color: rgba(13, 110, 253, 0.02) !important;
+  }
+
+  .pagination .page-item.active .page-link {
+      background-color: #0d6efd !important;
+      border-color: #0d6efd !important;
+      color: white !important;
+      font-weight: 600;
+  }
+
+  .pagination .page-link {
+      color: #0d6efd;
+      border: 1px solid #dee2e6;
+      padding: 0.5rem 0.75rem;
+      margin: 0 2px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+  }
+
+  .pagination .page-link:hover:not(.active) {
+      background-color: #e9ecef;
+      border-color: #adb5bd;
+      color: #0d6efd;
+  }
+  
+  /* Restaurant card specific styles */
+  .restaurant-item .btn-outline-primary {
+      display: inline-block;
+      width: auto; /* Decrease the length of the button */
+      max-width: fit-content;
+      padding: 0.25rem 0.75rem;
+  }
+  
+  /* Improve spacing in restaurant cards */
+  .restaurant-card {
+      padding: 12px;
+      margin-bottom: 15px;
+      width: 100%; /* Increase card width */
+  }
+  
+  .restaurant-card .card-title {
+      font-size: 1.1rem;
+  }
+  
+  /* Adjust the badge spacing and size */
+  .restaurant-card .badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.65em;
+  }
+  
+  /* Style the restaurant image */
+  .restaurant-card img {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 0.25rem;
+  }
+
+  /* Responsive Overrides (Không thay đổi) */
+  @media (max-width: 992px) {
+      body.search-page {
+          height: auto;
+          overflow: auto;
+      }
+
+      #main-frame,
+      #left-section {
+          flex-direction: column !important;
+          height: auto !important;
+          min-height: unset;
+          overflow: visible;
+      }
+
+      #left-section {
+          width: 100% !important;
+          padding: 0 15px !important;
+          gap: 0;
+      }
+
+      #filters-column,
+      #restaurants-column,
+      #map-section {
+          position: static !important;
+          width: 100% !important;
+          height: auto !important;
+          overflow-y: visible;
+      }
+
+      #filters-column {
+          margin-bottom: 2rem;
+      }      #map-section {
+          height: 400px !important;
+          padding: 0 15px 15px 15px !important;
+          margin-bottom: 20px; /* Giảm margin-bottom để giảm khoảng cách với footer trên mobile */
+      }
+  }

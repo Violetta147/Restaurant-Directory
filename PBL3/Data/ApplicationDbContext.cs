@@ -32,9 +32,7 @@ namespace PBL3.Data
         public DbSet<PromotionApplicableItem> PromotionApplicableItems { get; set; }
         public DbSet<PromotionApplicableCategory> PromotionApplicableCategories { get; set; }
         public DbSet<UserPromotionUsage> UserPromotionUsages { get; set; }
-        public DbSet<OperatingHour> OperatingHours { get; set; }
-
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        public DbSet<OperatingHour> OperatingHours { get; set; }        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
@@ -339,6 +337,19 @@ namespace PBL3.Data
 
             builder.Entity<UserPromotionUsage>()
                 .HasKey(pai => new { pai.PromotionId, pai.UserId });
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+            
+            // Configure query splitting to improve performance with multiple includes
+            // Configure query splitting to improve performance with multiple includes
+            if (optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlServer(options => 
+                    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+            }
         }
     }
 }

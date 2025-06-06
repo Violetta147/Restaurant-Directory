@@ -1,0 +1,53 @@
+/* Restaurant Card UI fixes */
+
+/* 3. Position "Xem chi tiết" button in the bottom right corner of each restaurant card */
+.restaurant-card {
+    position: relative;
+    padding-bottom: 3rem; /* Add space at the bottom for the button */
+}
+
+.restaurant-card .view-details-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+}
+
+/* 4. Remove blue highlight effect when clicking on a restaurant card */
+.restaurant-item {
+    outline: none !important;
+}
+
+.restaurant-card-highlighted {
+    border: none !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    background-color: #fff !important;
+}
+
+/* 5. Remove hover animation/floating effect on restaurant cards */
+.restaurant-card:hover {
+    transform: none !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* 6. Fix for pagination visibility */
+.pagination-container {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* 7. Fix pagination active state highlighting */
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+}
+
+/* Make the restaurant card's content area take full height */
+.restaurant-card .row {
+    height: 100%;
+}
+
+/* Ensure description area has proper spacing */
+.restaurant-card .description-area {
+    margin-bottom: 2.5rem;
+}

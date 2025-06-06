@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings")); 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
     options.UseSqlServer(
         connectionString,
         sqlServerOptionsAction: sqlOptions =>
@@ -26,7 +27,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             sqlOptions.MigrationsAssembly("PBL3");
             sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "dbo");
         }
-    ));
+    );
+});
 builder.Services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
 builder.Services.Configure<IdentityOptions>(options =>
@@ -95,6 +97,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddTransient<PBL3.Ultilities.IEmailSender, PBL3.Ultilities.EmailHelper>();
 builder.Services.AddScoped<IPhotoService, CloudinaryPhotoService>();
+builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 var app = builder.Build();
 
 // --- GỌI SEEDER Ở ĐÂY ---
@@ -108,17 +111,17 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<AppUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // Seed dữ liệu
+        // // Seed dữ liệu
         // await CuisineTypeSeeder.SeedCuisineTypesAsync(context);
         // await CategorySeeder.SeedAsync(context);
         // await TagSeeder.SeedTagsAsync(context);
 
-        //// Gọi seeder cho Roles và Users
+        // // Gọi seeder cho Roles và Users
         // await RoleAndUserSeeder.SeedRolesAsync(roleManager); // Gọi riêng để đảm bảo roles được tạo trước
         // await RoleAndUserSeeder.SeedAdminUsersAsync(userManager, roleManager);
         // await RoleAndUserSeeder.SeedBasicUsersAsync(userManager, roleManager);
 
-        // --- GỌI ADDRESS SEEDER ---
+        // // --- GỌI ADDRESS SEEDER ---
         // await AddressSeeder.SeedAsync(context);
 
         // await RestaurantSeeder.SeedAsync(context);

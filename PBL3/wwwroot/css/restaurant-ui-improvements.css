@@ -1,0 +1,55 @@
+/* Restaurant UI Improvements */
+
+/* Remove scrollbar from restaurants column and adjust for better layout */
+#restaurants-column {
+    overflow-y: hidden !important;
+}
+
+/* Make the restaurant list inside the column scrollable */
+#restaurant-list {
+    height: calc(100vh - 150px);
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Increase width of restaurant cards */
+.restaurant-card {
+    padding: 12px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+/* Adjust restaurant card image size */
+.restaurant-card img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+}
+
+/* Decrease the length of the "Xem chi tiết" button */
+.restaurant-item .btn-outline-primary {
+    display: inline-block;
+    width: auto;
+    padding: 0.25rem 0.75rem;
+    max-width: fit-content;
+}
+
+/* Improve spacing in restaurant cards */
+.restaurant-card .card-title {
+    font-size: 1.1rem;
+}
+
+/* Adjust the badge spacing and size */
+.restaurant-card .badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    #restaurant-list {
+        height: auto;
+        overflow-y: visible;
+    }
+}

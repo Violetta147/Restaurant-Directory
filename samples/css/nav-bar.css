@@ -1,0 +1,264 @@
+.fishloot-navbar {
+    background-color: #9FFFCB;
+    padding: 15px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    position: relative;
+    z-index: 100;
+}
+
+.fishloot-logo {
+    height: 36px;
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+.fishloot-search-container {
+    display: flex;
+    flex-grow: 1;
+    max-width: 900px;
+    position: relative;
+    margin: 0 15px;
+}
+
+.search-inputs-group {
+    display: flex;
+    width: 100%;
+    height: 40px;
+    border-radius: 4px;
+    overflow: visible; /* Đổi từ hidden sang visible để dropdown không bị cắt */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative; /* Đảm bảo các phần tử con có thể định vị tuyệt đối */
+}
+
+.fishloot-search-input {
+    border-radius: 4px 0 0 4px;
+    border: 1px solid #7AE582;
+    padding: 8px 16px;
+    width: 42%;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    border-right: none;
+    position: relative;
+}
+
+.fishloot-search-input:focus,
+.fishloot-search-location:focus {
+    border-color: #25A18E;
+    box-shadow: 0 0 0 2px rgba(37, 161, 142, 0.2);
+    background-color: #f9fffc;
+}
+
+.fishloot-search-location {
+    border: 1px solid #7AE582;
+    border-right: none;
+    padding: 8px 16px;
+    width: 100%;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+/* Xóa class .btn-use-location không được sử dụng và comment lý do xóa */
+/* Class .btn-use-location đã được xóa vì không còn sử dụng trong HTML */
+
+.fishloot-search-button {
+    background-color: #25A18E;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    padding: 8px 16px;
+    cursor: pointer;
+    min-width: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #25A18E;
+    transition: background-color 0.2s;
+}
+
+.fishloot-search-button:hover {
+    background-color: #1c8a79;
+}
+
+.fishloot-nav-links {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.fishloot-nav-link {
+    color: #333;
+    margin: 0 12px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.fishloot-signup-button {
+    background-color: #25A18E;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.fishloot-login-button {
+    background-color: transparent;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+}
+.fishloot-name {
+    font-size: 1.0rem; /* adjust as needed */
+    font-weight: 600;
+    color: #004E64; /* match your theme */
+    white-space: nowrap;
+    line-height: 1;
+    margin-right: 5px;
+}
+
+/* Thêm style cho nút logout nếu cần */
+.fishloot-logout-button {
+    background-color: transparent;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+/* Container cho location input và dropdown */
+.location-input-container {
+    position: relative;
+    flex: 1;
+    width: auto;
+    border-left: 1px solid #7AE582; /* Vạch ngăn cách */
+    z-index: 1001; /* Đảm bảo container có z-index cao hơn để dropdown hiển thị */
+}
+
+/* Location dropdown styles for navbar */
+.location-dropdown {
+    position: absolute;
+    top: 100%; /* Ngay dưới input */
+    left: 0;
+    width: 100%; /* Đúng bằng width của container */
+    background: white;
+    display: none; /* Hide by default */
+    border: 1px solid #7AE582;
+    border-top: none;
+    border-radius: 0 0 4px 4px; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.dropdown-item:hover {
+    background: #f5f5f5;
+    color: #25A18E;
+}
+
+.dropdown-item:active {
+    background: #d9ffea;
+}
+
+.dropdown-item i,
+.dropdown-item svg,
+.dropdown-item img {
+    margin-right: 8px;
+    font-size: 14px;
+    color: #25A18E;
+}
+
+/* Media queries để đảm bảo navbar hiển thị tốt trên các thiết bị khác nhau */
+@media (max-width: 991px) {
+    .fishloot-search-container {
+        margin: 10px 0;
+        max-width: none;
+    }
+    
+    .search-inputs-group {
+        flex-wrap: nowrap;
+    }
+    
+    .fishloot-nav-links {
+        margin-left: 10px;
+    }
+}
+
+@media (max-width: 767px) {
+    .fishloot-navbar .container-fluid {
+        padding: 0 10px;
+    }
+    
+    .fishloot-navbar .d-flex {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .fishloot-search-container {
+        order: 2;
+        margin: 10px 0;
+    }
+    
+    .search-inputs-group {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .fishloot-search-input {
+        width: 100%;
+        border-radius: 4px 4px 0 0;
+        border-right: 1px solid #7AE582;
+        border-bottom: none;
+    }
+      .fishloot-search-location {
+        border-radius: 0;
+        border-left: 1px solid #7AE582;
+        border-top: none;
+        width: 100%;
+    }
+    
+    .location-input-container {
+        width: 100%;
+        border-left: none;
+    }
+    
+    .fishloot-search-button {
+        border-radius: 0 0 4px 4px;
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .fishloot-nav-links {
+        order: 3;
+        margin: 10px 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .navbar-brand {
+        align-self: center;
+    }
+}
