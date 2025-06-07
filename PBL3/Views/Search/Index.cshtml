@@ -345,42 +345,7 @@
                     }, 100);
                 });
             });
-        });
-        
-        // Function to initialize restaurant card handlers
-        function initializeRestaurantCardHandlers() {
-            const restaurantCards = document.querySelectorAll('.restaurant-item');
-            restaurantCards.forEach(card => {
-                // Remove existing listeners
-                card.replaceWith(card.cloneNode(true));
-            });
-            
-            // Re-add listeners
-            const newRestaurantCards = document.querySelectorAll('.restaurant-item');
-            newRestaurantCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // Get restaurant data
-                    const restaurantId = this.dataset.id;
-                    const lat = parseFloat(this.dataset.lat);
-                    const lng = parseFloat(this.dataset.lng);
-                    
-                    // Pan map to restaurant location if map exists
-                    if (typeof map !== 'undefined' && map && lat && lng) {
-                        map.jumpTo({
-                            center: [lng, lat],
-                            zoom: 15
-                        });
-                        
-                        // Trigger marker click if available
-                        const markers = document.querySelectorAll(`[data-restaurant-id="${restaurantId}"]`);
-                        if (markers.length > 0) {
-                            markers[0].click();
-                        }
-                    }
-                });
-            });
-        }
-            // Initialize hidden inputs from URL parameters
+        });         
         function initializeFromUrlParams() {
             console.log("Initializing from URL parameters");
             const urlParams = new URLSearchParams(window.location.search);
@@ -416,19 +381,16 @@
                 }
             });
         }
-        
-        // Restaurant card interaction with map
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize restaurant card handlers
-            initializeRestaurantCardHandlers();
-            
+          // Restaurant card interaction with map
+        document.addEventListener('DOMContentLoaded', function() {            
             // Initialize hidden inputs from URL parameters
             initializeFromUrlParams();
         });
     </script>
     
     <!-- Mapbox GL JS -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>    <script src="~/js/search/search-map.js" asp-append-version="true"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
+    <script src="~/js/search/search-map.js" asp-append-version="true"></script>
     <!-- Pagination JS -->
     <script src="~/js/search/pagination.js" asp-append-version="true"></script>
 }
