@@ -11,9 +11,9 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">    
     <!-- Custom CSS-->
-    <link rel="stylesheet" href="~/css/restaurant-card-new.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/restaurant-card.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/search-results.css" asp-append-version="true">
-    <link rel="stylesheet" href="~/css/restaurant-ui-improvements.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/pagination.css" asp-append-version="true">
 }
 
 <!-- Hidden fields to pass data to JavaScript -->
@@ -57,11 +57,10 @@
                                  }
                              }
                          </div>
-                         <div class="mb-3">
-                             <label class="form-label fw-bold">Khoảng giá</label>
+                         <div class="mb-3">                             <label class="form-label fw-bold">Khoảng giá</label>
                              <div class="row g-2">
-                                <div class="col-6"><input type="number" name="MinPrice" value="@Model.MinPrice" class="form-control form-control-sm" placeholder="Tối thiểu"></div>
-                                <div class="col-6"><input type="number" name="MaxPrice" value="@Model.MaxPrice" class="form-control form-control-sm" placeholder="Tối đa"></div>
+                                <div class="col-6"><input type="number" name="MinPrice" value="@Model.MinPrice" class="form-control form-control-sm" placeholder="Tối thiểu" step="5000" min="0"></div>
+                                <div class="col-6"><input type="number" name="MaxPrice" value="@Model.MaxPrice" class="form-control form-control-sm" placeholder="Tối đa" step="5000" min="0"></div>
                              </div>
                          </div>
                          <div class="mb-3">
@@ -85,23 +84,51 @@
             <!-- Results Header -->
             <div class="results-header mb-3 d-flex justify-content-between align-items-center">
                  @{ bool hasRestaurants = Model.RestaurantCards?.Any() ?? false; }
-                 <div>
-                    <h1 class="h4 mb-0">
+                 <div>                    <h1 class="h4 mb-0">
                         @if (hasRestaurants) {
-                            <span>Kết quả cho "@Model.SearchTerm"</span>
+                            @if(string.IsNullOrEmpty(Model.SearchTerm)) {
+                                <span>Top 10 địa điểm ở Đà Nẵng</span>
+                            } else {
+                                @if(!string.IsNullOrEmpty(Model.Address)) {
+                                    <span>@Model.SearchTerm gần @Model.Address</span>
+                                } else {
+                                    <span>@Model.SearchTerm ở Đà Nẵng</span>
+                                }
+                            }
                         } else {
                             <span>Không tìm thấy kết quả</span>
                         }
-                    </h1>                    @if(hasRestaurants) {
-                        <small class="text-muted">Hiển thị @(Model.RestaurantCards?.Count ?? 0) của @(Model.RestaurantCards?.TotalItemCount ?? 0)</small>
-                    }
-                 </div>                 @if (hasRestaurants) {
-                     <form asp-action="Index" asp-controller="Search" method="get" id="sort-form" class="ms-3">
+                    </h1>
+                 </div>                 @if (hasRestaurants) {                     <form asp-action="Index" asp-controller="Search" method="get" id="sort-form" class="ms-3">
+                         <!-- Preserve all search parameters -->
                          <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
                          <input type="hidden" name="Address" value="@Model.Address" />
-                         <select name="SortBy" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 180px;">
-                             <option value="relevance" selected="@(Model.SortBy == "relevance")">Sắp xếp: Phù hợp nhất</option>
-                             <option value="highestrated" selected="@(Model.SortBy == "highestrated")">Sắp xếp: Đánh giá cao nhất</option>
+                         @if (Model.Lat.HasValue) { <input type="hidden" name="Lat" value="@Model.Lat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" /> }
+                         @if (Model.Lng.HasValue) { <input type="hidden" name="Lng" value="@Model.Lng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" /> }
+                         @if (!string.IsNullOrEmpty(Model.MaxDistance)) { <input type="hidden" name="MaxDistance" value="@Model.MaxDistance" /> }
+                         @if (Model.MinPrice.HasValue) { <input type="hidden" name="MinPrice" value="@Model.MinPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" /> }
+                         @if (Model.MaxPrice.HasValue) { <input type="hidden" name="MaxPrice" value="@Model.MaxPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)" /> }
+                         
+                         <!-- Include CuisineTypeIds as hidden inputs -->
+                         @if (Model.CuisineTypeIds != null)
+                         {
+                             foreach (var id in Model.CuisineTypeIds)
+                             {
+                                 <input type="hidden" name="CuisineTypeIds" value="@id" />
+                             }
+                         }
+                         
+                         <!-- Include TagIds as hidden inputs -->
+                         @if (Model.TagIds != null)
+                         {
+                             foreach (var id in Model.TagIds)
+                             {
+                                 <input type="hidden" name="TagIds" value="@id" />
+                             }
+                         }                           
+                             <select name="SortBy" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 180px;">
+                             <option value="relevance" selected="@(Model.SortBy == "relevance")">Sắp xếp: Được đề xuất</option>
+                             <option value="highestrated" selected="@(Model.SortBy == "highestrated")">Sắp xếp: Xếp hạng cao nhất</option>
                              <option value="mostreviewed" selected="@(Model.SortBy == "mostreviewed")">Sắp xếp: Đánh giá nhiều nhất</option>
                          </select>
                      </form>
@@ -111,15 +138,27 @@
                 <div id="restaurant-list">
                     @await Html.PartialAsync("_RestaurantCardPartial", Model.RestaurantCards)
                 </div>
-                
-                <!-- Pagination - Always visible container -->
                 <div class="pagination-container">
-                    @if (Model.RestaurantCards != null && Model.RestaurantCards.PageCount > 1) {
-                        <nav aria-label="Pagination">
-                           <ul class="pagination">
-                               @if (Model.RestaurantCards.HasPreviousPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber - 1))">«</a></li> }
-                               @for (int i = 1; i <= Model.RestaurantCards.PageCount; i++) { <li class="page-item @(i == Model.RestaurantCards.PageNumber ? "active" : "")" data-page="@i"><a class="page-link" href="javascript:loadPage(@i)">@i</a></li> }
-                               @if (Model.RestaurantCards.HasNextPage) { <li class="page-item"><a class="page-link" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber + 1))">»</a></li> }
+                    @if (Model.RestaurantCards != null && Model.RestaurantCards.PageCount > 1)
+                     {                        
+                        <nav class="pagination-nav-visible">
+                           <ul class="pagination pagination-list-visible">
+                               @if (Model.RestaurantCards.HasPreviousPage) { 
+                                   <li class="page-item-visible">
+                                       <a class="page-link-visible page-link-prev" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber - 1))">«</a>
+                                   </li> 
+                               }
+                               @for (int i = 1; i <= Model.RestaurantCards.PageCount; i++) { 
+                                   <li class="page-item-visible" data-page="@i">
+                                       <a class="page-link-visible @(i == Model.RestaurantCards.PageNumber ? "current-page" : "")" 
+                                          href="javascript:loadPage(@i)">@i</a>
+                                   </li> 
+                               }
+                               @if (Model.RestaurantCards.HasNextPage) { 
+                                   <li class="page-item-visible">
+                                       <a class="page-link-visible page-link-next" href="javascript:loadPage(@(Model.RestaurantCards.PageNumber + 1))">»</a>
+                                   </li> 
+                               }
                            </ul>
                         </nav>
                     }
@@ -156,7 +195,7 @@
                         {
                             @foreach (var cuisine in cuisineTypes)
                             {
-                                bool isSelected = Model.CuisineTypeIds != null && System.Linq.Enumerable.Contains(Model.CuisineTypeIds, cuisine.Id);
+                                bool isSelected = Model.CuisineTypeIds != null && Model.CuisineTypeIds.Contains(cuisine.Id);
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
                                         <input class="form-check-input modal-cuisine-checkbox" type="checkbox" 
@@ -182,7 +221,61 @@
 @section Scripts {    
     <script>
         // Initialize filters functionality
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {            // Sync all hidden inputs to ensure modal reflects all selected IDs
+            function syncCuisineTypeSelections() {
+                console.log("Syncing cuisine selections...");
+                
+                // Get all selected cuisine IDs (both visible checkboxes and hidden inputs)
+                const visibleSelections = Array.from(
+                    document.querySelectorAll('input[name="CuisineTypeIds"][type="checkbox"]:checked')
+                ).map(cb => cb.value);
+                console.log("Visible selections:", visibleSelections);
+                
+                const hiddenSelections = Array.from(
+                    document.querySelectorAll('input[name="CuisineTypeIds"][type="hidden"]')
+                ).map(input => input.value);
+                console.log("Hidden selections:", hiddenSelections);
+                
+                // Get cuisine IDs from URL params (in case they weren't added as hidden inputs)
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlSelections = urlParams.getAll('CuisineTypeIds');
+                console.log("URL selections:", urlSelections);
+                
+                // Combine all arrays without duplicates
+                const allSelectedIds = [...new Set([...visibleSelections, ...hiddenSelections, ...urlSelections])];
+                console.log("All selected IDs:", allSelectedIds);
+                
+                // Update all modal checkboxes to reflect these selections
+                document.querySelectorAll('.modal-cuisine-checkbox').forEach(cb => {
+                    cb.checked = allSelectedIds.includes(cb.value);
+                    console.log(`Setting checkbox ${cb.value} to ${cb.checked}`);
+                });
+                
+                return allSelectedIds;
+            }
+            
+            // Sync modal checkboxes when the modal is shown
+            const modalElement = document.getElementById('allCategoriesModal');
+            if (modalElement) {
+                // Use both 'show.bs.modal' and 'shown.bs.modal' to ensure it works
+                modalElement.addEventListener('show.bs.modal', function() {
+                    console.log("Modal show event triggered");
+                    syncCuisineTypeSelections();
+                });
+                
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    console.log("Modal shown event triggered");
+                    syncCuisineTypeSelections();
+                });
+                
+                // Add a direct click handler to the button that opens the modal
+                document.querySelector('[data-bs-target="#allCategoriesModal"]').addEventListener('click', function() {
+                    console.log("Modal button clicked");
+                    // Add a small delay to ensure modal is ready
+                    setTimeout(syncCuisineTypeSelections, 100);
+                });
+            }
+            
             // Remove any animations from the Apply Filters button
             const applyFiltersBtn = document.getElementById('apply-filters-btn');
             if (applyFiltersBtn) {
@@ -194,17 +287,42 @@
                         form.submit();
                     }
                 });
-            }
-
-            // Handle modal categories
+            }            // Handle modal categories
             const applyModalBtn = document.getElementById('applyModalCategories');
             if (applyModalBtn) {
                 applyModalBtn.addEventListener('click', function() {
                     const checkedBoxes = document.querySelectorAll('.modal-cuisine-checkbox:checked');
                     const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
-                      // Update main form checkboxes
-                    document.querySelectorAll('input[name="CuisineTypeIds"]').forEach(cb => {
+                    console.log("Selected IDs from modal:", selectedIds);
+                    
+                    const form = document.getElementById('filter-form');
+                    
+                    // Remove any existing hidden inputs for CuisineTypeIds
+                    document.querySelectorAll('input[name="CuisineTypeIds"][type="hidden"]').forEach(input => {
+                        input.remove();
+                    });
+                    
+                    // Update checkboxes in the main form (for first 6 items)
+                    document.querySelectorAll('input[name="CuisineTypeIds"][type="checkbox"]').forEach(cb => {
+                        const wasChecked = cb.checked;
                         cb.checked = selectedIds.includes(cb.value);
+                        console.log(`Checkbox ${cb.value}: ${wasChecked} -> ${cb.checked}`);
+                    });
+                    
+                    // Add hidden inputs for all selected IDs that aren't in visible checkboxes
+                    selectedIds.forEach(id => {
+                        // Check if there's already a checkbox for this ID in the main form
+                        const existingCheckbox = form.querySelector(`input[name="CuisineTypeIds"][value="${id}"][type="checkbox"]`);
+                        
+                        // If no checkbox exists for this ID in the main form, add a hidden input
+                        if (!existingCheckbox) {
+                            console.log(`Adding hidden input for ID ${id}`);
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'CuisineTypeIds';
+                            hiddenInput.value = id;
+                            form.appendChild(hiddenInput);
+                        }
                     });
                     
                     // Close modal
@@ -212,8 +330,10 @@
                     if (modal) {
                         modal.hide();
                     }
-                      // Submit filter form
-                    document.getElementById('filter-form').submit();
+                    
+                    console.log("Submitting form with updated selections");
+                    // Submit filter form
+                    form.submit();
                 });
             }
 
@@ -226,92 +346,7 @@
                 });
             });
         });
-        window.loadPage = function(pageNumber) {
-            console.log('loadPage called with page:', pageNumber);
-            
-            // Get current search parameters
-            const params = new URLSearchParams(window.location.search);
-            
-            // Update page parameter
-            params.set('Page', pageNumber);
-            
-            console.log('Requesting URL:', `/Search?${params.toString()}`);
-            
-            // Show loading
-            const restaurantList = document.getElementById('restaurant-list');
-            if (restaurantList) {
-                restaurantList.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-            }
-            
-            // Send AJAX request
-            fetch(`/Search?${params.toString()}`)
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(html => {
-                    console.log('Received HTML length:', html.length);
-                    
-                    // Parse the response to get both restaurant list and pagination
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // Update restaurant list content
-                    const newRestaurantContent = doc.querySelector('#restaurant-list');
-                    if (newRestaurantContent && restaurantList) {
-                        restaurantList.innerHTML = newRestaurantContent.innerHTML;
-                    }
-                      // Update pagination
-                    const currentPagination = document.querySelector('nav[aria-label="Pagination"]');
-                    const newPagination = doc.querySelector('nav[aria-label="Pagination"]');
-                    
-                    // If we can find pagination containers
-                    if (currentPagination && newPagination) {
-                        // Update pagination HTML
-                        currentPagination.innerHTML = newPagination.innerHTML;
-                        
-                        // Explicitly set the active page class
-                        const pageItems = currentPagination.querySelectorAll('.page-item');
-                        pageItems.forEach(item => {
-                            const dataPage = parseInt(item.getAttribute('data-page'));
-                            if (dataPage === pageNumber) {
-                                item.classList.add('active');
-                            } else {
-                                item.classList.remove('active');
-                            }
-                        });
-                    } else {
-                        console.warn('Pagination elements not found');
-                    }
-                    
-                    // Update URL without reloading page
-                    const newUrl = `${window.location.pathname}?${params.toString()}`;
-                    window.history.pushState({ path: newUrl }, '', newUrl);
-                    
-                    // Scroll to top of results
-                    document.querySelector('.results-header')?.scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Reload restaurants on map after AJAX update
-                    if (typeof loadRestaurantsFromList === 'function') {
-                        console.log('Calling loadRestaurantsFromList');
-                        loadRestaurantsFromList();
-                    } else {
-                        console.warn('loadRestaurantsFromList function not found');
-                    }
-                    
-                    // Re-initialize restaurant card click handlers
-                    initializeRestaurantCardHandlers();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    if (restaurantList) {
-                        restaurantList.innerHTML = '<div class="alert alert-danger">Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.</div>';
-                    }
-                });
-        }        
+        
         // Function to initialize restaurant card handlers
         function initializeRestaurantCardHandlers() {
             const restaurantCards = document.querySelectorAll('.restaurant-item');
@@ -324,12 +359,6 @@
             const newRestaurantCards = document.querySelectorAll('.restaurant-item');
             newRestaurantCards.forEach(card => {
                 card.addEventListener('click', function() {
-                    // Remove highlighting from all cards
-                    newRestaurantCards.forEach(c => c.classList.remove('restaurant-card-highlighted'));
-                    
-                    // Highlight clicked card
-                    this.classList.add('restaurant-card-highlighted');
-                    
                     // Get restaurant data
                     const restaurantId = this.dataset.id;
                     const lat = parseFloat(this.dataset.lat);
@@ -351,14 +380,55 @@
                 });
             });
         }
+            // Initialize hidden inputs from URL parameters
+        function initializeFromUrlParams() {
+            console.log("Initializing from URL parameters");
+            const urlParams = new URLSearchParams(window.location.search);
+            const cuisineTypeIds = urlParams.getAll('CuisineTypeIds');
+            
+            // Skip if no CuisineTypeIds in URL or if there's no filter form
+            if (cuisineTypeIds.length === 0 || !document.getElementById('filter-form')) {
+                console.log("No cuisine IDs in URL or no filter form");
+                return;
+            }
+            
+            console.log("Found cuisine IDs in URL:", cuisineTypeIds);
+            const form = document.getElementById('filter-form');
+            
+            // Update visible checkboxes first
+            document.querySelectorAll('input[name="CuisineTypeIds"][type="checkbox"]').forEach(cb => {
+                cb.checked = cuisineTypeIds.includes(cb.value);
+            });
+            
+            // Create hidden inputs for IDs that don't have visible checkboxes
+            cuisineTypeIds.forEach(id => {
+                const existingCheckbox = form.querySelector(`input[name="CuisineTypeIds"][value="${id}"][type="checkbox"]`);
+                const existingHidden = form.querySelector(`input[name="CuisineTypeIds"][value="${id}"][type="hidden"]`);
+                
+                // Only add if no input exists for this ID yet
+                if (!existingCheckbox && !existingHidden) {
+                    console.log(`Adding hidden input from URL for ID ${id}`);
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'CuisineTypeIds';
+                    hiddenInput.value = id;
+                    form.appendChild(hiddenInput);
+                }
+            });
+        }
         
         // Restaurant card interaction with map
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize restaurant card handlers
             initializeRestaurantCardHandlers();
+            
+            // Initialize hidden inputs from URL parameters
+            initializeFromUrlParams();
         });
-    </script>    
+    </script>
+    
     <!-- Mapbox GL JS -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
-    <script src="~/js/search/search-map.js" asp-append-version="true"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>    <script src="~/js/search/search-map.js" asp-append-version="true"></script>
+    <!-- Pagination JS -->
+    <script src="~/js/search/pagination.js" asp-append-version="true"></script>
 }

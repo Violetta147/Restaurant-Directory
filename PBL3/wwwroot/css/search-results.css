@@ -1,189 +1,286 @@
-  body.search-page {
-      margin: 0 !important;
-      padding: 0 !important;
-      padding-bottom: 0 !important; /* Đảm bảo không có padding-bottom */
-      background-color: #f8f9fa;
-  }
+/* ==== SEARCH PAGE LAYOUT STYLES ==== */
+
+/* Base search page styling */
+body.search-page {
+    margin: 0;
+    padding: 0;
+    padding-bottom: 0; /* No padding-bottom */
+    background-color: #f8f9fa;
+    overflow-x: hidden;
+}
       
-  /* Ghi đè footer cho search page */
-  body.search-page .footer {
-      margin-top: 0 !important;
-  }/* Main frame layout - sẽ co giãn để lấp đầy không gian */
-  #main-frame {
-      display: flex !important;
-      flex: 1 1 auto;
-      /* Quan trọng: Cho phép nó co giãn lấp đầy không gian */
-      padding: 20px 0 0 0 !important;
-      margin: 0 !important;
-      max-width: 100% !important;
-      overflow: hidden;
-      /* Ngăn nội dung tràn ra ngoài */
-      min-height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
-  }
+/* Footer override for search page */
+body.search-page .footer {
+    margin-top: 0;
+}
 
-  /* Left section layout */
-  #left-section {
-      display: flex !important;
-      width: 60% !important;
-      flex: none !important;
-      padding-left: 15px !important;
-      flex-direction: row !important;
-      gap: 15px;
-  }  /* --- THAY ĐỔI QUAN TRỌNG Ở ĐÂY --- */
-  /* Tính chiều cao cho các panel, tính cả khoảng cách footer */
-  #filters-column,
-  #restaurants-column {
-      height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
-      max-height: calc(100vh - 80px); /* Điều chỉnh max-height tương ứng */
-  }
+/* Main frame layout */
+#main-frame {
+    display: flex;
+    flex: 1 1 auto;
+    padding: 20px 0 0 0;
+    margin: 0;
+    max-width: 100%;
+    overflow: visible; /* Allow natural scrolling */
+    min-height: calc(100vh - 80px);
+}
 
-  #map-section {
-      height: calc(100vh - 80px); /* Giảm xuống để giảm khoảng cách với footer */
-      max-height: calc(100vh - 80px); /* Điều chỉnh max-height tương ứng */
-  }
+/* Left section layout */
+#left-section {
+    display: flex;
+    width: 60%;
+    flex: none;
+    padding-left: 15px;
+    flex-direction: row;
+    gap: 15px;
+}
 
-  /* Filters column - left side of left section */
-  #filters-column {
-      width: 280px !important;
-      min-width: 280px !important;
-      align-self: flex-start;
-      position: sticky;
-      top: 20px;
-      overflow-y: auto;
-      /* Cho phép cuộn */
-  }  /* Restaurant list column - right side of left section */
-  #restaurants-column {
-      flex: 1 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      overflow-y: auto !important; /* Enable scrollbar */
-      padding-right: 15px;
-  }
-  
-  /* Restaurant list - scrollable container */
-  #restaurant-list {
-      flex-grow: 1 !important;
-      overflow-y: auto !important;
-  }
-  
-  /* Style for restaurant cards inside restaurants-column */
-  #restaurants-column .restaurant-card {
-      width: 100%; /* Increase the width of the restaurant card */
-  }
+/* ==== COLUMN LAYOUT STYLES ==== */
 
-  /* Map section - right section */
-  #map-section {
-      width: 40% !important;
-      flex: none !important;
-      padding-right: 15px !important;
-      align-self: flex-start;
-      position: sticky;
-      top: 20px;
-  }  #mapbox-container {
-      width: 100% !important;
-      height: 100% !important;
-      border-radius: 8px;
-      min-height: 600px; /* Fallback minimum height */
-      max-height: calc(100vh - 100px); /* Điều chỉnh để gần hơn với footer */
-  }
+/* Filters column */
+#filters-column {
+    width: 280px;
+    min-width: 280px;
+    height: calc(100vh - 100px);
+    max-height: calc(100vh - 100px);
+    position: sticky;
+    top: 20px;
+    z-index: 1050; /* Highest z-index for filters */
+    overflow-y: auto;
+    align-self: flex-start;
+    background-color: #f8f9fa;
+}
 
-  /* ... các style khác như .pagination, .restaurant-card-highlighted giữ nguyên ... */
-  .restaurant-card-highlighted {
-      border: 2px solid #0d6efd !important;
-      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15) !important;
-      background-color: rgba(13, 110, 253, 0.02) !important;
-  }
+/* Restaurants column */
+#restaurants-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    overflow: visible; /* Allow natural scrolling with browser scrollbar */
+    position: relative;
+    padding-right: 15px;
+    min-height: initial;
+}
 
-  .pagination .page-item.active .page-link {
-      background-color: #0d6efd !important;
-      border-color: #0d6efd !important;
-      color: white !important;
-      font-weight: 600;
-  }
+/* Restaurant list container */
+#restaurant-list {
+    flex-grow: 1;
+    overflow-y: visible;
+    height: auto;
+    min-height: initial;
+    max-height: none;
+    display: block;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    position: relative;
+    z-index: 1030;
+}
 
-  .pagination .page-link {
-      color: #0d6efd;
-      border: 1px solid #dee2e6;
-      padding: 0.5rem 0.75rem;
-      margin: 0 2px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-  }
+/* Map section */
+#map-section {
+    width: 40%;
+    flex: none;
+    padding-right: 15px;
+    height: calc(100vh - 100px);
+    max-height: calc(100vh - 100px);
+    position: sticky;
+    top: 20px;
+    z-index: 1040; /* High but below filters */
+    display: block;
+}
 
-  .pagination .page-link:hover:not(.active) {
-      background-color: #e9ecef;
-      border-color: #adb5bd;
-      color: #0d6efd;
-  }
-  
-  /* Restaurant card specific styles */
-  .restaurant-item .btn-outline-primary {
-      display: inline-block;
-      width: auto; /* Decrease the length of the button */
-      max-width: fit-content;
-      padding: 0.25rem 0.75rem;
-  }
-  
-  /* Improve spacing in restaurant cards */
-  .restaurant-card {
-      padding: 12px;
-      margin-bottom: 15px;
-      width: 100%; /* Increase card width */
-  }
-  
-  .restaurant-card .card-title {
-      font-size: 1.1rem;
-  }
-  
-  /* Adjust the badge spacing and size */
-  .restaurant-card .badge {
-      font-size: 0.75rem;
-      padding: 0.35em 0.65em;
-  }
-  
-  /* Style the restaurant image */
-  .restaurant-card img {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 0.25rem;
-  }
+/* Map container */
+#mapbox-container {
+    height: 100%;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    min-height: 600px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    z-index: 1;
+}
 
-  /* Responsive Overrides (Không thay đổi) */
-  @media (max-width: 992px) {
-      body.search-page {
-          height: auto;
-          overflow: auto;
-      }
+/* ==== PAGINATION STYLES ==== */
 
-      #main-frame,
-      #left-section {
-          flex-direction: column !important;
-          height: auto !important;
-          min-height: unset;
-          overflow: visible;
-      }
+/* Pagination container */
+.pagination-container {
+    display: flex;
+    visibility: visible;
+    justify-content: center;
+    margin: 20px 0 30px 0;
+    width: 100%;
+    z-index: 9999;
+    position: relative;
+    opacity: 1;
+}
 
-      #left-section {
-          width: 100% !important;
-          padding: 0 15px !important;
-          gap: 0;
-      }
+/* Pagination navigation */
+.pagination-container nav[aria-label="Pagination"] {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
 
-      #filters-column,
-      #restaurants-column,
-      #map-section {
-          position: static !important;
-          width: 100% !important;
-          height: auto !important;
-          overflow-y: visible;
-      }
+/* Pagination list */
+.pagination-container .pagination {
+    display: flex;
+    visibility: visible;
+    opacity: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 15px 0;
+    padding-left: 0;
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+}
 
-      #filters-column {
-          margin-bottom: 2rem;
-      }      #map-section {
-          height: 400px !important;
-          padding: 0 15px 15px 15px !important;
-          margin-bottom: 20px; /* Giảm margin-bottom để giảm khoảng cách với footer trên mobile */
-      }
-  }
+/* Pagination item */
+.pagination-container .pagination .page-item {
+    display: inline-block;
+    visibility: visible;
+    opacity: 1;
+    margin: 0 2px;
+    list-style: none;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Pagination link */
+.pagination-container .pagination .page-link {
+    display: flex;
+    visibility: visible;
+    opacity: 1;
+    justify-content: center;
+    align-items: center;
+    min-width: 40px;
+    min-height: 40px;
+    position: relative;
+    z-index: 65;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #0d6efd;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+/* Pagination active state */
+.pagination-container .pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+    font-weight: 600;
+    z-index: 66;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.5);
+}
+
+/* Pagination hover state */
+.pagination-container .pagination .page-item:hover .page-link {
+    background-color: #e9ecef;
+    border-color: #0d6efd;
+    color: #0d6efd;
+    z-index: 65;
+}
+
+/* ==== RESTAURANT CARD OVERRIDES (SEARCH-SPECIFIC) ==== */
+
+/* Restaurant card width in search results */
+#restaurants-column .restaurant-card {
+    width: 100%;
+}
+
+/* Search-specific button styles */
+.restaurant-item .btn-outline-primary {
+    display: inline-block;
+    width: auto;
+    max-width: fit-content;
+    padding: 0.25rem 0.75rem;
+}
+
+/* Search-specific badge styles */
+.restaurant-card .badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+  /* ==== RESPONSIVE STYLES ==== */
+@media (max-width: 992px) {
+    body.search-page {
+        height: auto;
+        overflow: auto;
+    }
+
+    #main-frame,
+    #left-section {
+        flex-direction: column;
+        height: auto;
+        min-height: unset;
+        overflow: visible;
+    }
+
+    #left-section {
+        width: 100%;
+        padding: 0 15px;
+        gap: 0;
+    }
+
+    #filters-column,
+    #restaurants-column,
+    #map-section {
+        position: static;
+        width: 100%;
+        height: auto;
+        overflow-y: visible;
+    }
+
+    #filters-column {
+        margin-bottom: 2rem;
+    }
+    
+    #map-section {
+        height: 400px;
+        padding: 0 15px 15px 15px;
+        margin-bottom: 20px;
+    }
+}
+
+/* ==== VISIBILITY FIXES ==== */
+
+/* Map controls visibility */
+.mapboxgl-ctrl-top-right {
+    z-index: 1045;
+    display: block;
+    visibility: visible;
+}
+
+/* Hide map scale controls */
+.mapboxgl-ctrl.mapboxgl-ctrl-scale {
+    display: none;
+    visibility: hidden;
+}
+
+/* Force visible utility class for JavaScript-manipulated elements */
+.force-visible {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    z-index: 9999;
+    position: relative;
+}
+
+.pagination.force-visible {
+    display: flex;
+}
+
+.page-link.force-visible {
+    display: flex;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+}

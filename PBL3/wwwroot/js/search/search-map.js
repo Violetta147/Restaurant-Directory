@@ -2,6 +2,8 @@
 let map;
 let markers = [];
 let currentPopup = null;
+let mapisDragging = false;
+let mapMoved = false;
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeMap() {
     // Get map configuration from hidden inputs
     const mapboxToken = document.getElementById('mapbox-token')?.value;
+    //log javascript to check if token is present
+    console.log('Mapbox token:', mapboxToken ? 'Present' : 'Missing');
     const initialLat = parseFloat(document.getElementById('map-initial-lat')?.value || '16.075000');
     const initialLng = parseFloat(document.getElementById('map-initial-lng')?.value || '108.206230');
     
@@ -20,6 +24,7 @@ function initializeMap() {
         showMapError('Map configuration missing');
         return;
     }
+      // No need to remove scale controls - they won't be added in the first place
 
     console.log('Map config:', { lat: initialLat, lng: initialLng });
 
@@ -34,16 +39,10 @@ function initializeMap() {
             center: [initialLng, initialLat],
             zoom: 12,
             language: 'vi'
-        });
-
-        // Add navigation controls
+        });        // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-        // Add scale control
-        map.addControl(new mapboxgl.ScaleControl({
-            maxWidth: 80,
-            unit: 'metric'
-        }), 'bottom-left');        // Wait for map to load before adding markers
+        
+        // Wait for map to load before adding markers
         map.on('load', function() {
             console.log('Map loaded successfully');
             loadRestaurantsFromList();
@@ -147,9 +146,6 @@ function loadRestaurantsFromList() {
                 popup.addTo(map);
                 currentPopup = popup;
                 
-                // Highlight corresponding restaurant card
-                highlightRestaurantCard(id);
-                
                 // Center map on marker
                 map.easeTo({
                     center: [lng, lat],
@@ -235,25 +231,6 @@ function createPopupContent(name, rating, reviewCount, address, id) {
     `;
 }
 
-function highlightRestaurantCard(restaurantId) {
-    // Remove highlighting from all cards
-    document.querySelectorAll('.restaurant-item').forEach(card => {
-        card.classList.remove('restaurant-card-highlighted');
-    });
-    
-    // Highlight the specific card
-    const targetCard = document.querySelector(`.restaurant-item[data-id="${restaurantId}"]`);
-    if (targetCard) {
-        targetCard.classList.add('restaurant-card-highlighted');
-        
-        // Scroll card into view
-        targetCard.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-        });
-    }
-}
-
 function centerMapOnRestaurant(restaurantId) {
     const card = document.querySelector(`.restaurant-item[data-id="${restaurantId}"]`);
     if (card && map) {
@@ -283,33 +260,6 @@ function clearMarkers() {
     }
 }
 
-// Toggle satellite view
-document.addEventListener('DOMContentLoaded', function() {
-    const satelliteToggle = document.getElementById('toggle-satellite');
-    if (satelliteToggle) {
-        let isSatellite = false;
-        
-        satelliteToggle.addEventListener('click', function() {
-            if (!map) return;
-            
-            if (isSatellite) {
-                map.setStyle('mapbox://styles/mapbox/streets-v12');
-                this.innerHTML = '<i class="bi bi-globe"></i> Vệ tinh';
-                isSatellite = false;
-            } else {
-                map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
-                this.innerHTML = '<i class="bi bi-map"></i> Bản đồ';
-                isSatellite = true;
-            }
-            
-            // Re-add markers after style change
-            map.once('styledata', function() {
-                setTimeout(loadRestaurantsFromList, 500);
-            });
-        });
-    }
-});
-
 // Reload map functionality
 document.addEventListener('DOMContentLoaded', function() {
     const reloadButton = document.getElementById('reload-map-button');
@@ -333,3 +283,4 @@ window.addEventListener('resize', function() {
 // Global function to be called after AJAX updates
 window.loadRestaurantsFromList = loadRestaurantsFromList;
 window.centerMapOnRestaurant = centerMapOnRestaurant;
+

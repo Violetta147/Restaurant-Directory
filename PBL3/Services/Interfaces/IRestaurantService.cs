@@ -5,19 +5,6 @@ namespace PBL3.Services.Interfaces
 {
     public interface IRestaurantService
     {
-        // --- Chức năng cho người dùng (User) ---        /// <summary>
-        /// Lấy danh sách tất cả các nhà hàng đang hoạt động.
-        /// </summary>
-        Task<IEnumerable<Restaurant>> GetRestaurantsAsync();
-
-        /// <summary>
-        /// Lấy danh sách tất cả các nhà hàng đang hoạt động với phân trang.
-        /// </summary>
-        /// <param name="pageNumber">Số trang.</param>
-        /// <param name="pageSize">Số lượng kết quả trên mỗi trang.</param>
-        /// <returns>Danh sách nhà hàng với phân trang.</returns>
-        Task<IPagedList<Restaurant>> GetAllRestaurantsPaginatedAsync(int pageNumber = 1, int pageSize = 10);
-
         /// <summary>
         /// Lấy chi tiết thông tin của một nhà hàng dựa trên ID.
         /// </summary>
@@ -25,53 +12,32 @@ namespace PBL3.Services.Interfaces
         /// <returns>Đối tượng Restaurant hoặc null nếu không tìm thấy.</returns>
         Task<Restaurant?> GetRestaurantByIdAsync(int id); // Sử dụng nullable reference types (C# 8+)
 
-        /// <summary>
-        /// Tìm kiếm và lọc nhà hàng.
-        /// </summary>
-        /// <param name="searchTerm">Từ khóa tìm kiếm (tên nhà hàng, tên món ăn, mô tả...).</param>
-        /// <param name="cuisineTypeIds">Danh sách ID loại hình ẩm thực để lọc.</param>
-        /// <param name="tagIds">Danh sách ID tag để lọc.</param>
-        /// <param name="minPrice">Giá tối thiểu để lọc.</param>
-        /// <param name="maxPrice">Giá tối đa để lọc.</param>
-        /// <param name="sortBy">Tiêu chí sắp xếp (ví dụ: "rating", "price", "name").</param>
-        /// <param name="pageNumber">Số trang (cho phân trang).</param>
-        /// <param name="pageSize">Số lượng kết quả trên mỗi trang (cho phân trang).</param>        /// <returns>Danh sách nhà hàng phù hợp với tiêu chí tìm kiếm/lọc.</returns>
-        Task<IPagedList<Restaurant>> SearchRestaurantsAsync(
+        Task<IPagedList<Restaurant>> SearchRestaurantsAdvancedAsync(
             string? searchTerm = null,
+            string? addressQuery = null,
+            double? latitude = null,
+            double? longitude = null,
+            double? radiusInKm = 5.0,
             IEnumerable<int>? cuisineTypeIds = null,
             IEnumerable<int>? tagIds = null,
             decimal? minPrice = null,
             decimal? maxPrice = null,
-            string? sortBy = null, // Có thể dùng enum thay vì string cho sortBy
+            string? sortBy = null,
             int pageNumber = 1,
             int pageSize = 10
-        );        // Location-based search
-        Task<IPagedList<Restaurant>> SearchRestaurantsByLocationAsync(
-                string? addressQuery,
-                double? latitude = null,
-                double? longitude = null,
-                double? radiusInKm = 5.0,
-                int pageNumber = 1,
-                int pageSize = 10
-            );            
-        //Combined search (term + location)
-            Task<IPagedList<Restaurant>> SearchRestaurantsAdvancedAsync(
-                string? searchTerm = null,
-                string? addressQuery = null,
-                double? latitude = null,
-                double? longitude = null,
-                double? radiusInKm = 5.0,
-                IEnumerable<int>? cuisineTypeIds = null,
-                IEnumerable<int>? tagIds = null,
-                decimal? minPrice = null,
-                decimal? maxPrice = null,
-                string? sortBy = null,
-                int pageNumber = 1,
-                int pageSize = 10
-            );
-
-        // Có thể thêm các phương thức lọc/tìm kiếm chuyên biệt khác nếu cần
+        );  
         // Task<IEnumerable<Restaurant>> GetRestaurantsByLocationAsync(double latitude, double longitude, double radiusInKm); // Tìm nhà hàng gần vị trí
+        
+        /// <summary>
+        /// Chuẩn hóa địa chỉ và tọa độ với giá trị mặc định cho Đà Nẵng nếu không được cung cấp
+        /// </summary>
+        /// <param name="address">Địa chỉ đầu vào, có thể null hoặc rỗng</param>
+        /// <param name="latitude">Tọa độ vĩ độ đầu vào, có thể null</param>
+        /// <param name="longitude">Tọa độ kinh độ đầu vào, có thể null</param>
+        /// <param name="radiusInKm">Bán kính tìm kiếm đầu vào, có thể null</param>
+        /// <returns>Tuple chứa địa chỉ, tọa độ vĩ độ, kinh độ và bán kính đã chuẩn hóa</returns>
+        (string address, double latitude, double longitude, double radiusInKm) NormalizeLocationParameters(
+            string? address, double? latitude = null, double? longitude = null, string? maxDistance = null);
 
         // --- Chức năng cho Admin hoặc Chủ Nhà hàng (RestaurantOwner) ---
         // (Cần cơ chế xác thực và phân quyền để chỉ cho phép người có quyền thực hiện)
@@ -103,7 +69,11 @@ namespace PBL3.Services.Interfaces
         // Có thể thêm các phương thức quản lý chi tiết hơn (ví dụ: thêm/xóa tag cho nhà hàng, thêm/xóa loại hình ẩm thực...)
         // Task<bool> AddCuisineTypeToRestaurantAsync(int restaurantId, int cuisineTypeId);
         // Task<bool> RemoveCuisineTypeFromRestaurantAsync(int restaurantId, int cuisineTypeId);
-
+        /// <summary>
+        /// Gets all cuisine types ordered by name
+        /// </summary>
+        /// <returns>A list of cuisine types</returns>
+        Task<List<CuisineType>> GetAllCuisineTypesAsync();
     }
 }
 
