@@ -14,10 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeMap() {
     // Get map configuration from hidden inputs
     const mapboxToken = document.getElementById('mapbox-token')?.value;
-    //log javascript to check if token is present
-    console.log('Mapbox token:', mapboxToken ? 'Present' : 'Missing');
-    const initialLat = parseFloat(document.getElementById('map-initial-lat')?.value || '16.075000');
+    const initialLat = parseFloat(document.getElementById('map-initial-lat')?.value || '16.047079');
+    //log javascript to check if initial latitude is valid
+    console.log('Initial latitude:', isNaN(initialLat) ? 'Invalid' : initialLat);
+    //log javascript to check if initial longitude is valid
     const initialLng = parseFloat(document.getElementById('map-initial-lng')?.value || '108.206230');
+    console.log('Initial longitude:', isNaN(initialLng) ? 'Invalid' : initialLng);
     
     if (!mapboxToken) {
         console.warn('Mapbox token not found. Map will not be initialized.');
@@ -31,6 +33,8 @@ function initializeMap() {
     try {
         // Set Mapbox access token
         mapboxgl.accessToken = mapboxToken;
+        //log mapboxgltoken to check if it is valid
+        console.log('Mapbox access token set:', mapboxgl.accessToken);
 
         // Initialize map
         map = new mapboxgl.Map({
@@ -41,7 +45,22 @@ function initializeMap() {
             language: 'vi'
         });        // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-        
+        //add user location control
+        if (navigator.geolocation) {
+            map.addControl(new mapboxgl.GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true
+                },
+                trackUserLocation: true,
+                showUserLocation: true,
+                fitBoundsOptions: {
+                    maxZoom: 15
+                }
+            }), 'top-right');
+        } else {
+            console.warn('Geolocation not supported by this browser');
+            showMapError('Geolocation not supported');
+        }
         // Wait for map to load before adding markers
         map.on('load', function() {
             console.log('Map loaded successfully');
@@ -55,6 +74,7 @@ function initializeMap() {
                     map.setLayoutProperty(layer.id, 'visibility', 'none');
                 }
             });
+            console.log('POI labels hidden');
         });
 
         map.on('error', function(e) {
@@ -105,6 +125,8 @@ function loadRestaurantsFromList() {
 
     restaurantCards.forEach((card, index) => {
         const lat = parseFloat(card.dataset.lat);
+        //log javascript to check if latitude is valid
+        console.log(`Card ${index + 1} latitude:`, isNaN(lat) ? 'Invalid' : lat);
         const lng = parseFloat(card.dataset.lng);
         const name = card.dataset.name || card.querySelector('.restaurant-name')?.textContent || 'Unknown Restaurant';
         const rating = card.dataset.rating || card.querySelector('.rating-value')?.textContent || 'N/A';

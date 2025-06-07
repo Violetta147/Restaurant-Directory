@@ -71,6 +71,8 @@ namespace PBL3.Controllers
                 OperatingHours = r.OperatingHours,
                 MinTypicalPrice = r.MinTypicalPrice,
                 MaxTypicalPrice = r.MaxTypicalPrice,
+                Latitude = r.Address?.Latitude,
+                Longitude = r.Address?.Longitude,
             }).ToList();
             
             // Return as IPagedList

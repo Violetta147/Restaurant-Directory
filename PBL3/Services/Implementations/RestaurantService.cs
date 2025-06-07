@@ -220,8 +220,8 @@ namespace PBL3.Services.Implementations
                 address = "Đà Nẵng";
             }
             
-            double normalizedLatitude = latitude ?? 16.0544; // Tọa độ trung tâm Đà Nẵng
-            double normalizedLongitude = longitude ?? 108.2022;
+            double normalizedLatitude = latitude ?? 16.047079; // Tọa độ trung tâm Đà Nẵng
+            double normalizedLongitude = longitude ?? 108.206230;
             
             double radiusInKm = 5.0;
             
