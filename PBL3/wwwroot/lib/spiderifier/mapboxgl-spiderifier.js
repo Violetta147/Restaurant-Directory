@@ -147,24 +147,58 @@ MapboxglSpiderifier.prototype = {
             leg.addEventListener('click', this._handleClick.bind(this));
         }
     },
-      _handleClick: function(e) {
+  _handleClick: function(e) {
         var target = e.target;
         var featureId = target.getAttribute('data-feature-id');
         if (featureId && this._featureById[featureId]) {
             var feature = this._featureById[featureId];
             
+            // Calculate exact position based on the current position of the spider leg pin
+            // Use client coordinates from the event for accurate positioning
+            var rect = target.getBoundingClientRect();
+            var pinCenterX = rect.left + (rect.width / 2);
+            var pinCenterY = rect.top + (rect.height / 2);
+            
             // Add the pin position to the event so the click handler can use it
             e.pinPosition = {
                 left: parseFloat(target.style.left),
                 top: parseFloat(target.style.top),
-                clientX: e.clientX,
-                clientY: e.clientY
+                clientX: pinCenterX,
+                clientY: pinCenterY,
+                rect: rect
             };
+            
+            console.log('Spider pin clicked at position:', e.pinPosition);
+            
+            // First try to use the visual (unprojected) coordinates
+            var visualLng = parseFloat(target.getAttribute('data-visual-lng'));
+            var visualLat = parseFloat(target.getAttribute('data-visual-lat'));
+            
+            // If visual coordinates are not available, use the data-lng/lat (which we updated to be visual)
+            if (isNaN(visualLng) || isNaN(visualLat)) {
+                visualLng = parseFloat(target.getAttribute('data-lng'));
+                visualLat = parseFloat(target.getAttribute('data-lat'));
+            }
+            
+            // Store the coordinates so that the click handler can use them
+            e.pinLngLat = {
+                lng: visualLng,
+                lat: visualLat,
+                isVisual: true
+            };
+            
+            // Also store original coordinates as a fallback
+            e.originalLngLat = {
+                lng: parseFloat(target.getAttribute('data-original-lng') || feature.geometry.coordinates[0]),
+                lat: parseFloat(target.getAttribute('data-original-lat') || feature.geometry.coordinates[1])
+            };
+            
+            console.log('Using pin coordinates:', e.pinLngLat);
+            console.log('Original coordinates:', e.originalLngLat);
             
             this._options.onClick(e, feature);
         }
-    },
-      spiderfy: function(lngLat, features) {
+    },    spiderfy: function(lngLat, features) {
         if (!lngLat || !features || features.length === 0) {
             console.log('No features to spiderify');
             return;
@@ -182,6 +216,14 @@ MapboxglSpiderifier.prototype = {
             var feature = features[i];
             var id = feature.properties && feature.properties.id ? feature.properties.id : i;
             this._featureById[id] = feature;
+            
+            // Ensure each feature has an originalLngLat property to avoid confusion
+            if (!feature.originalLngLat) {
+                feature.originalLngLat = {
+                    lng: feature.geometry.coordinates[0],
+                    lat: feature.geometry.coordinates[1]
+                };
+            }
         }
         
         // Calculate positions for each leg
@@ -235,9 +277,35 @@ MapboxglSpiderifier.prototype = {
             pinElement.style.left = `${point.x + pos.x - halfPinSize}px`; // Center horizontally
             pinElement.style.top = `${point.y + pos.y - halfPinSize}px`; // Center vertically
             
-            // Store the original coordinates as data attributes for popup positioning
-            pinElement.setAttribute('data-lng', feature.geometry.coordinates[0]);
-            pinElement.setAttribute('data-lat', feature.geometry.coordinates[1]);
+            // Calculate the actual visual position for the pin in map coordinates
+            // We need to unproject the visual pixel position to get geographic coordinates
+            try {
+                // Create point at the visual position
+                const visualPoint = {
+                    x: point.x + pos.x,
+                    y: point.y + pos.y
+                };
+                
+                // Convert this point to geographic coordinates
+                const visualLngLat = this._map.unproject(visualPoint);
+                
+                // Store both the visual and original coordinates
+                pinElement.setAttribute('data-visual-lng', visualLngLat.lng);
+                pinElement.setAttribute('data-visual-lat', visualLngLat.lat);
+                pinElement.setAttribute('data-lng', visualLngLat.lng); // Use visual position as primary
+                pinElement.setAttribute('data-lat', visualLngLat.lat); // Use visual position as primary
+                
+                // Also store original coordinates for reference
+                pinElement.setAttribute('data-original-lng', feature.geometry.coordinates[0]);
+                pinElement.setAttribute('data-original-lat', feature.geometry.coordinates[1]);
+                
+                console.log('Pin visual coordinates:', visualLngLat);
+            } catch (error) {
+                console.error('Error calculating visual coordinates:', error);
+                // Fallback to original coordinates if calculation fails
+                pinElement.setAttribute('data-lng', feature.geometry.coordinates[0]);
+                pinElement.setAttribute('data-lat', feature.geometry.coordinates[1]);
+            }
             
             // IMPORTANT: Ensure the original coordinates are accessible in the popup
             // Clone them to ensure they're not lost or altered during event handling

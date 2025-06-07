@@ -134,13 +134,83 @@ function initializeMap() {
                         });
 
                         console.log('Leg pin styled:', pin.style.cssText);
-                    }, onClick: function (e, feature) {
+                    },                    onClick: function (e, feature) {
                         e.stopPropagation(); // Prevent event bubbling
-
+                        console.log('Spider leg clicked:', e, feature);
+                        
                         if (currentPopup) currentPopup.remove();
-
-                        const markerCoords = feature.geometry.coordinates;
-
+                        
+                        let popupCoords;
+                        
+                        try {
+                            // First priority: Try to use the pre-calculated visual coordinates
+                            if (e.pinLngLat && e.pinLngLat.lng && e.pinLngLat.lat && e.pinLngLat.isVisual) {
+                                console.log('Using pre-calculated visual LngLat for popup:', e.pinLngLat);
+                                popupCoords = e.pinLngLat;
+                            }
+                            // Second priority: Calculate coordinates from screen position
+                            else if (e.pinPosition && e.pinPosition.clientX && e.pinPosition.clientY) {
+                                console.log('Using pin screen position for popup:', e.pinPosition);
+                                
+                                // Create a point using the spider leg pin's screen position
+                                const point = {
+                                    x: e.pinPosition.clientX,
+                                    y: e.pinPosition.clientY
+                                };
+                                
+                                // Get the point relative to map container if needed
+                                const container = map.getContainer();
+                                const rect = container.getBoundingClientRect();
+                                
+                                // For Mapbox GL, we can check if we need to adjust the point
+                                // Some implementations need this adjustment, others don't
+                                const mapPoint = {
+                                    x: point.x - rect.left,
+                                    y: point.y - rect.top
+                                };
+                                
+                                // Convert screen coordinates to map coordinates
+                                // First try with direct clientX/Y coordinates
+                                try {
+                                    popupCoords = map.unproject(point);
+                                    console.log('Unprojected from client coordinates:', popupCoords);
+                                } catch (err) {
+                                    // If that fails, try with adjusted mapPoint
+                                    console.log('Trying with adjusted map point:', mapPoint);
+                                    popupCoords = map.unproject(mapPoint);
+                                }
+                            } 
+                            // Third priority: Use data attributes from the pin element
+                            else if (e.target && e.target.getAttribute) {
+                                const lng = parseFloat(e.target.getAttribute('data-lng'));
+                                const lat = parseFloat(e.target.getAttribute('data-lat'));
+                                
+                                if (!isNaN(lng) && !isNaN(lat)) {
+                                    console.log('Using data attributes for popup position:', {lng, lat});
+                                    popupCoords = { lng, lat };
+                                } else {
+                                    throw new Error('Invalid data attributes');
+                                }
+                            }
+                            // Last priority: Fallback to original feature coordinates
+                            else {
+                                console.log('Fallback: Using original feature coordinates');
+                                popupCoords = {
+                                    lng: feature.geometry.coordinates[0],
+                                    lat: feature.geometry.coordinates[1]
+                                };
+                            }
+                        } catch (error) {
+                            console.error('Error calculating popup position:', error);
+                            // Last resort fallback
+                            popupCoords = {
+                                lng: feature.geometry.coordinates[0],
+                                lat: feature.geometry.coordinates[1]
+                            };
+                            console.log('Error fallback: Using original coordinates:', popupCoords);
+                        }
+                        
+                        // Create and show the popup
                         const popup = new mapboxgl.Popup({
                             closeButton: true,
                             closeOnClick: false,
@@ -149,10 +219,13 @@ function initializeMap() {
                             offset: [0, -18],
                             anchor: 'bottom'
                         }).setHTML(feature.properties.popupContent);
-
-                        popup.setLngLat(markerCoords);
+                        
+                        // Set popup position and display
+                        popup.setLngLat(popupCoords);
                         popup.addTo(map);
                         currentPopup = popup;
+                        
+                        console.log('Popup created at coordinates:', popupCoords);
                     }
 
                 });
