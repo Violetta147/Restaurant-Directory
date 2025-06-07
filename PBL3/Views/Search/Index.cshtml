@@ -9,11 +9,12 @@
     <!-- Mapbox GL CSS -->
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">    
-    <!-- Custom CSS-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">      <!-- Custom CSS-->
     <link rel="stylesheet" href="~/css/restaurant-card.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/search-results.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/pagination.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/lib/spiderifier/mapboxgl-spiderifier.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/search-map-spider.css" asp-append-version="true">
 }
 
 <!-- Hidden fields to pass data to JavaScript -->
@@ -386,10 +387,10 @@
             // Initialize hidden inputs from URL parameters
             initializeFromUrlParams();
         });
-    </script>
-    
-    <!-- Mapbox GL JS -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
+    </script>    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>    <!-- Spiderifier Library -->
+    <script src="~/lib/spiderifier/mapboxgl-spiderifier.js" asp-append-version="true"></script>
+    <!-- Map with Clustering and Spiderifier JS -->
     <script src="~/js/search/search-map.js" asp-append-version="true"></script>
     <!-- Pagination JS -->
     <script src="~/js/search/pagination.js" asp-append-version="true"></script>
