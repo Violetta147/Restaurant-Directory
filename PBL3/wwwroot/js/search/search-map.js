@@ -46,21 +46,21 @@ function initializeMap() {
         });        // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
         //add user location control
-        if (navigator.geolocation) {
-            map.addControl(new mapboxgl.GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true
-                },
-                trackUserLocation: true,
-                showUserLocation: true,
-                fitBoundsOptions: {
-                    maxZoom: 15
-                }
-            }), 'top-right');
-        } else {
-            console.warn('Geolocation not supported by this browser');
-            showMapError('Geolocation not supported');
-        }
+        // if (navigator.geolocation) {
+        //     map.addControl(new mapboxgl.GeolocateControl({
+        //         positionOptions: {
+        //             enableHighAccuracy: true
+        //         },
+        //         trackUserLocation: true,
+        //         showUserLocation: true,
+        //         fitBoundsOptions: {
+        //             maxZoom: 15
+        //         }
+        //     }), 'top-right');
+        // } else {
+        //     console.warn('Geolocation not supported by this browser');
+        //     showMapError('Geolocation not supported');
+        // }
         // Wait for map to load before adding markers
         map.on('load', function() {
             console.log('Map loaded successfully');
@@ -457,7 +457,7 @@ function initializeRestaurantCardHandlers() {
                         markerElement.style.backgroundColor = '#dc3545'; // Red default color
                         markerElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
                         markerElement.style.zIndex = '';
-                    }, 3000);
+                    }, 10000);
                 }
             }
             
