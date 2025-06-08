@@ -141,3 +141,34 @@
     margin-left: 10px;
     cursor: pointer;
 }
+
+/* Avatar cho dropdown người dùng */
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #25A18E;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.user-avatar-button {
+    padding: 0;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.user-avatar-button::after {
+    margin-left: 8px;
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #333;
+}

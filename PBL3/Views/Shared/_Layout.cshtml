@@ -61,14 +61,25 @@
                             <a asp-controller="Restaurants" asp-action="Create" class="fishloot-nav-link">Loot your
                                 business</a>
                             <a href="#" class="fishloot-nav-link">Write a Review</a>
-                            <a href="#" class="fishloot-nav-link">Start a Project</a>
-                            @if (SignInManager.IsSignedIn(User))
+                            <a href="#" class="fishloot-nav-link">Start a Project</a>                            @if (SignInManager.IsSignedIn(User))
                             {
                                 <div class="dropdown">
-                                    <button class="fishloot-nav-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Hello @UserManager.GetUserName(User)!
+                                    @{                                        var user = await UserManager.GetUserAsync(User);
+                                        var avatarUrl = !string.IsNullOrEmpty(user?.AvatarUrl) 
+                                            ? user.AvatarUrl 
+                                            : "/images/default-avatar.svg";
+                                    }
+                                    <button class="user-avatar-button" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">                                        <img src="@avatarUrl" alt="@UserManager.GetUserName(User)" class="user-avatar" 
+                                             onerror="this.src='/images/default-avatar.svg'; this.onerror=null;">
                                     </button>
-                                    <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                        <li class="px-3 py-2 d-flex align-items-center">
+                                            <div class="ms-2">
+                                                <div class="fw-bold">@UserManager.GetUserName(User)</div>
+                                                <small class="text-muted">@user?.Email</small>
+                                            </div>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" asp-controller="Account" asp-action="Manage">
                                             <i class="fas fa-user-cog me-2"></i>Quản lý tài khoản
                                         </a></li>
