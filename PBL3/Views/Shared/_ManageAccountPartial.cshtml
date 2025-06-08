@@ -13,16 +13,18 @@
                     {
                         avatarUrl = ViewBag.AvatarUrl;
                     }
-                }
-                <div class="profile-image-container mb-3">
+                }                <div class="profile-image-container mb-3">
                     <img src="@avatarUrl" alt="@Model.UserName" class="rounded-circle profile-image" 
                          onerror="this.src='/images/default-avatar.svg'; this.onerror=null;">
                     
-                    <div class="avatar-overlay">
-                        <button type="button" class="btn btn-sm btn-light upload-avatar-btn" data-bs-toggle="modal" data-bs-target="#uploadAvatarModal">
-                            <i class="fas fa-camera"></i>
-                        </button>
-                    </div>
+                    @if (Model.IsViewingOwnProfile)
+                    {
+                        <div class="avatar-overlay">
+                            <button type="button" class="btn btn-sm btn-light upload-avatar-btn" data-bs-toggle="modal" data-bs-target="#uploadAvatarModal">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    }
                 </div>
                 
                 <h5 class="card-title mb-1 fw-bold">@Model.UserName</h5>
@@ -53,34 +55,51 @@
                         <span class="badge bg-secondary" title="Xác thực 2 lớp chưa bật">
                             <i class="fas fa-shield me-1"></i>2FA
                         </span>
-                    }
-                </div>
+                    }                </div>
             </div>
-        </div>        <!-- Navigation Menu -->
+        </div>
+          <!-- Navigation Menu -->
         <div class="card sidebar-card border-0 shadow-sm mb-4">
             <div class="card-header border-0 bg-primary text-white">
-                <h5 class="card-title mb-0"><i class="fas fa-cog me-2"></i>Quản lý tài khoản</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-cog me-2"></i>
+                    @if (Model.IsViewingOwnProfile)
+                    {
+                        <text>Quản lý tài khoản</text>
+                    }
+                    else
+                    {
+                        <text>Thông tin cá nhân</text>
+                    }
+                </h5>
             </div>
-            <div class="list-group list-group-flush">                <a href="#profile" class="list-group-item list-group-item-action active" data-section="profile-section">
+            <div class="list-group list-group-flush">
+                <a href="#profile" class="list-group-item list-group-item-action active" data-section="profile-section">
                     <i class="fas fa-user me-2"></i>Hồ sơ cá nhân
                 </a>
-                <a href="#security" class="list-group-item list-group-item-action" data-section="security-section">
-                    <i class="fas fa-shield-alt me-2"></i>Bảo mật
-                </a>
-                <a href="#change-password" class="list-group-item list-group-item-action" data-section="change-password-section">
-                    <i class="fas fa-key me-2"></i>Đổi mật khẩu
-                </a>
-                <a href="#reviews" class="list-group-item list-group-item-action" data-section="reviews-section">
-                    <i class="fas fa-star me-2"></i>Đánh giá nhà hàng
-                </a>
-                <a asp-controller="Account" asp-action="Orders" class="list-group-item list-group-item-action">
-                    <i class="fas fa-shopping-basket me-2"></i>Đơn hàng của tôi
-                </a>
-                <a asp-controller="Restaurant" asp-action="MyRestaurants" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-utensils me-2"></i>Nhà hàng của tôi</span>
-                    <span class="badge bg-primary">@Model.RestaurantCount</span>
-                </a>
-            </div>        </div>
+                
+                @if (Model.IsViewingOwnProfile)
+                {
+                    <a href="#security" class="list-group-item list-group-item-action" data-section="security-section">
+                        <i class="fas fa-shield-alt me-2"></i>Bảo mật
+                    </a>
+                    <a href="#change-password" class="list-group-item list-group-item-action" data-section="change-password-section">
+                        <i class="fas fa-key me-2"></i>Đổi mật khẩu
+                    </a>
+                    <a href="#reviews" class="list-group-item list-group-item-action" data-section="reviews-section">
+                        <i class="fas fa-star me-2"></i>Đánh giá của tôi
+                    </a>
+                    @* Orders section is commented/hidden as per requirements
+                    <a asp-controller="Account" asp-action="Orders" class="list-group-item list-group-item-action">
+                        <i class="fas fa-shopping-basket me-2"></i>Đơn hàng của tôi
+                    </a>
+                    *@
+                    <a href="https://restaurant-management.fishloot.com" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-external-link-alt me-2"></i>Quản lý nhà hàng
+                        <i class="fas fa-external-link-alt ms-1 small text-muted"></i>
+                    </a>
+                }
+            </div>
+        </div>
     </div>
 </div>
 
@@ -169,28 +188,31 @@
 </style>
 
 <!-- Modal for Uploading Avatar -->
-<div class="modal fade" id="uploadAvatarModal" tabindex="-1" aria-labelledby="uploadAvatarModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadAvatarModalLabel">Đổi ảnh đại diện</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form asp-controller="Account" asp-action="UploadAvatar" method="post" enctype="multipart/form-data" id="uploadAvatarForm">
-                    <div class="mb-3">
-                        <label for="avatarFile" class="form-label">Chọn ảnh đại diện mới</label>
-                        <input type="file" class="form-control" id="avatarFile" name="AvatarFile" accept="image/*" required>
-                        <div class="form-text">
-                            Định dạng hỗ trợ: JPG, JPEG, PNG. Kích thước tối đa: 5MB.
+@if (Model.IsViewingOwnProfile)
+{
+    <div class="modal fade" id="uploadAvatarModal" tabindex="-1" aria-labelledby="uploadAvatarModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadAvatarModalLabel">Đổi ảnh đại diện</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form asp-controller="Account" asp-action="UploadAvatar" method="post" enctype="multipart/form-data" id="uploadAvatarForm">
+                        <div class="mb-3">
+                            <label for="avatarFile" class="form-label">Chọn ảnh đại diện mới</label>
+                            <input type="file" class="form-control" id="avatarFile" name="AvatarFile" accept="image/*" required>
+                            <div class="form-text">
+                                Định dạng hỗ trợ: JPG, JPEG, PNG. Kích thước tối đa: 5MB.
+                            </div>
                         </div>
-                    </div>
-                    <div class="text-center mt-4">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-primary">Tải lên</button>
-                    </div>
-                </form>
+                        <div class="text-center mt-4">
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary">Tải lên</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}

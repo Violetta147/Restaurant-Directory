@@ -2,6 +2,7 @@ using PBL3.Models;
 using PBL3.Services.Interfaces;
 using PBL3.Data;
 using X.PagedList;
+using X.PagedList.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
 
@@ -308,11 +309,14 @@ namespace PBL3.Services.Implementations
             double normalizedLongitude = 108.206230;
             
             return (address, normalizedLatitude, normalizedLongitude, defaultRadius);
-        }
-
-        public Task<Restaurant?> GetRestaurantByIdAsync(int id)
+        }        public Task<IPagedList<Restaurant>> GetRestaurantByOwnerIdAsync(string ownerId, int page, int pageSize)
         {
-            throw new NotImplementedException();
+            //get all restaurants owned by the user with the User.Id = ownerId
+            //and return paginated list
+            return _context.Restaurants
+                .Where(r => r.OwnerId == ownerId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToPagedListAsync(page, pageSize);
         }
     }
 }

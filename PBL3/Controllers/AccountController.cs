@@ -853,7 +853,7 @@ namespace PBL3.Controllers
             // Validate lại mật khẩu người dùng nhập ở bước này với mật khẩu gốc
             if (model.PasswordToConfirm != originalPassword)
             {
-                ModelState.AddModelError("PasswordToConfirm", "Mật khẩu bạn vừa nhập không khớp với mật khẩu đã đăng ký ban đầu.");
+                ModelState.AddModelError("PasswordToConfirm", "Mật khẩu và xác nhận mật khẩu không khớp.");
             }
 
             if (ModelState.IsValid)
@@ -920,35 +920,54 @@ namespace PBL3.Controllers
             }
             return View(model);        }        // ACTION QUẢN LÝ TÀI KHOẢN
         [HttpGet]
-        public async Task<IActionResult> Manage()
+        public async Task<IActionResult> Manage(string? userId = null)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
             {
                 return NotFound("User not found");
             }
 
-            // Count restaurants owned by the current user using RestaurantService
-            var restaurantCount = await _restaurantService.GetRestaurantCountByOwnerIdAsync(user.Id);
+            AppUser targetUser;
+            bool isViewingOwnProfile;
+
+            // If userId is provided, we're viewing another user's profile
+            if (!string.IsNullOrEmpty(userId) && userId != currentUser.Id)
+            {
+                targetUser = await _userManager.FindByIdAsync(userId);
+                if (targetUser == null)
+                {
+                    return NotFound("Target user not found");
+                }
+                isViewingOwnProfile = false;
+            }
+            else
+            {
+                // Viewing own profile
+                targetUser = currentUser;
+                isViewingOwnProfile = true;
+            }
+
+            // Count restaurants owned by the target user using RestaurantService
+            var restaurantCount = await _restaurantService.GetRestaurantCountByOwnerIdAsync(targetUser.Id);
 
             var model = new ManageAccountViewModel
             {
-                Id = user.Id,
-                UserName = user.UserName ?? "",
-                Email = user.Email ?? "",
-                PhoneNumber = user.PhoneNumber,
-                Gender = user.Gender,
-                DateOfBirth = user.DateOfBirth,
-                TwoFactorEnabled = user.TwoFactorEnabled,
-                IsEmailConfirmed = user.EmailConfirmed,
+                Id = targetUser.Id,
+                UserName = targetUser.UserName ?? "",
+                Email = targetUser.Email ?? "",
+                PhoneNumber = targetUser.PhoneNumber,
+                Gender = targetUser.Gender,
+                DateOfBirth = targetUser.DateOfBirth,
+                TwoFactorEnabled = targetUser.TwoFactorEnabled,
+                IsEmailConfirmed = targetUser.EmailConfirmed,
                 RestaurantCount = restaurantCount,
+                IsViewingOwnProfile = isViewingOwnProfile,
                 StatusMessage = TempData["StatusMessage"]?.ToString()
             };
 
             return View(model);
-        }
-
-        [HttpPost]
+        }        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Manage(ManageAccountViewModel model)
         {
@@ -958,11 +977,18 @@ namespace PBL3.Controllers
                 return NotFound("User not found");
             }
 
+            // Only allow editing own profile
+            if (model.Id != user.Id)
+            {
+                return Forbid("You can only edit your own profile");
+            }
+
             if (!ModelState.IsValid)
             {
                 // Reload current values if validation fails
                 model.TwoFactorEnabled = user.TwoFactorEnabled;
                 model.IsEmailConfirmed = user.EmailConfirmed;
+                model.IsViewingOwnProfile = true;
                 return View(model);
             }
 
@@ -996,6 +1022,7 @@ namespace PBL3.Controllers
                     AddErrors(updateResult);
                     model.TwoFactorEnabled = user.TwoFactorEnabled;
                     model.IsEmailConfirmed = user.EmailConfirmed;
+                    model.IsViewingOwnProfile = true;
                     return View(model);
                 }
             }            TempData["StatusMessage"] = "Thông tin tài khoản đã được cập nhật thành công.";
@@ -1079,6 +1106,51 @@ namespace PBL3.Controllers
                 .ToListAsync();
 
             return PartialView("_RestaurantReviewsPartial", reviews);
+        }        [HttpGet]
+        public async Task<IActionResult> GetMyRestaurants(int page = 1)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy người dùng" });
+            }
+
+            try
+            {
+                // Get restaurants owned by the current user with pagination
+                const int pageSize = 6; // Set appropriate page size for restaurant cards
+                var restaurants = await _restaurantService.GetRestaurantByOwnerIdAsync(user.Id, page, pageSize);
+                  // Convert to RestaurantCardViewModel for the partial view
+                var restaurantCardViewModels = restaurants.Select(r => new PBL3.ViewModel.RestaurantCardViewModel
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Description = r.Description,
+                    FullAddress = r.Address?.FullAddress ?? r.Address?.AddressLine1 ?? "Địa chỉ chưa cập nhật",
+                    CardImageUrl = r.MainImageUrl,
+                    AverageRating = r.AverageRating,
+                    ReviewCount = r.ReviewCount,
+                    Latitude = r.Address?.Latitude,
+                    Longitude = r.Address?.Longitude,
+                    MinTypicalPrice = r.MinTypicalPrice,
+                    MaxTypicalPrice = r.MaxTypicalPrice,
+                    Status = r.Status, // Add the missing Status property mapping
+                    CuisineSummary = r.RestaurantCuisines?.Select(rc => rc.CuisineType?.Name).Where(name => !string.IsNullOrEmpty(name)).ToList() ?? new List<string?>()
+                }).ToList();
+                
+                // Create a new paged list with the converted data
+                var pagedResult = new X.PagedList.StaticPagedList<PBL3.ViewModel.RestaurantCardViewModel>(
+                    restaurantCardViewModels,
+                    restaurants.PageNumber,
+                    restaurants.PageSize,
+                    restaurants.TotalItemCount);
+                
+                return PartialView("_MyRestaurantsPartial", pagedResult);
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false, message = "Có lỗi xảy ra khi tải danh sách nhà hàng" });
+            }
         }
 
         [HttpPost]

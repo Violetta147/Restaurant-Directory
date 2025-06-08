@@ -4,13 +4,14 @@ using X.PagedList;
 namespace PBL3.Services.Interfaces
 {
     public interface IRestaurantService
-    {
-        /// <summary>
-        /// Lấy chi tiết thông tin của một nhà hàng dựa trên ID.
+    {        /// <summary>
+        /// Lấy danh sách nhà hàng phân trang dựa trên ID chủ sở hữu.
         /// </summary>
-        /// <param name="id">ID của nhà hàng.</param>
-        /// <returns>Đối tượng Restaurant hoặc null nếu không tìm thấy.</returns>
-        Task<Restaurant?> GetRestaurantByIdAsync(int id); // Sử dụng nullable reference types (C# 8+)
+        /// <param name="ownerId">ID của chủ sở hữu nhà hàng.</param>
+        /// <param name="page">Số trang hiện tại.</param>
+        /// <param name="pageSize">Số lượng bản ghi trên mỗi trang.</param>
+        /// <returns>Danh sách nhà hàng phân trang.</returns>
+        Task<IPagedList<Restaurant>> GetRestaurantByOwnerIdAsync(string ownerId, int page, int pageSize);
 
         Task<IPagedList<Restaurant>> SearchRestaurantsAdvancedAsync(
             string? searchTerm = null,

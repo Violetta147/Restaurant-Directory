@@ -29,10 +29,12 @@ namespace PBL3.ViewModel
         public bool TwoFactorEnabled { get; set; }
           [Display(Name = "Email đã được xác nhận")]
         public bool IsEmailConfirmed { get; set; }
-        
-        [Display(Name = "Số lượng nhà hàng")]
+          [Display(Name = "Số lượng nhà hàng")]
         public int RestaurantCount { get; set; }
         
         public string? StatusMessage { get; set; }
+        
+        // Property to determine if current user is viewing their own profile
+        public bool IsViewingOwnProfile { get; set; }
     }
 }
