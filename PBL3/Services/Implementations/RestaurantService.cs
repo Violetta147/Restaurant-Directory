@@ -64,20 +64,48 @@ namespace PBL3.Services.Implementations
                     r.RestaurantCuisines.Any(rc => rc.CuisineType.Name.ToLower().Contains(searchTerm)) ||
                     r.RestaurantTags.Any(rt => rt.Tag.Name.ToLower().Contains(searchTerm))
                 );
-            }
-
-            // Apply address text search if provided
+            }            // Apply address text search if provided
             if (!string.IsNullOrEmpty(addressQuery))
             {
-                query = query.Where(r =>
-                    r.Address != null && (
-                        r.Address.AddressLine1.Contains(addressQuery) ||
-                        r.Address.Ward.Contains(addressQuery) ||
-                        r.Address.District.Contains(addressQuery) ||
-                        r.Address.City.Contains(addressQuery) ||
-                        r.Address.Country.Contains(addressQuery)
-                    )
-                );
+                // Normalize search term to lower case and trim for better matching
+                string normalizedAddressQuery = addressQuery.ToLower().Trim();
+                
+                // Check if the address query contains commas, indicating it might be a full address
+                if (normalizedAddressQuery.Contains(','))
+                {
+                    // Split the address into parts (street, ward, district, city)
+                    var addressParts = normalizedAddressQuery.Split(',')
+                        .Select(part => part.Trim())
+                        .Where(part => !string.IsNullOrEmpty(part))
+                        .ToList();
+                      // Create a more precise query that tries to match all parts of the address
+                    // We can't use FullAddress in EF Core query - it's not mapped
+                    query = query.Where(r => 
+                        r.Address != null && 
+                        // Match individual parts against appropriate address fields
+                        addressParts.All(part => 
+                            r.Address.AddressLine1.ToLower().Contains(part) || 
+                            r.Address.Ward.ToLower().Contains(part) || 
+                            r.Address.District.ToLower().Contains(part) || 
+                            r.Address.City.ToLower().Contains(part) || 
+                            r.Address.Country.ToLower().Contains(part))
+                    );
+                }
+                else 
+                {                    // For simpler queries, use the standard approach but with improved matching
+                    query = query.Where(r =>
+                        r.Address != null && (
+                            r.Address.AddressLine1.ToLower().Contains(normalizedAddressQuery) ||
+                            r.Address.Ward.ToLower().Contains(normalizedAddressQuery) ||
+                            r.Address.District.ToLower().Contains(normalizedAddressQuery) ||
+                            r.Address.City.ToLower().Contains(normalizedAddressQuery) ||
+                            r.Address.Country.ToLower().Contains(normalizedAddressQuery)
+                            // Removed FullAddress check as it's not mapped to the database
+                        )
+                    );
+                }
+                
+                _logger.LogInformation("Applied address search for: {AddressQuery}", addressQuery);
             }
 
             // Apply cuisine filters

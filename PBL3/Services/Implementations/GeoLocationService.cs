@@ -62,7 +62,7 @@ namespace PBL3.Services.Implementations
                 { "Buon Ma Thuot", (12.6789, 108.0389) }
             };
         }
-
+        
         public async Task<(double latitude, double longitude)> GetCoordinatesFromAddressAsync(string address)
         {
             if (string.IsNullOrWhiteSpace(address))
@@ -72,8 +72,14 @@ namespace PBL3.Services.Implementations
                 return (16.047079, 108.206230);
             }
             
-            // First try direct matching with known Vietnamese cities
-            if (TryDirectCityMatch(address, out var coordinates))
+            // Check if this is likely a detailed street address (e.g., starting with a number)
+            bool isDetailedAddress = IsLikelyStreetAddress(address);
+            
+            _logger.LogInformation("Processing address: {Address}, Detected as detailed: {IsDetailed}", 
+                address, isDetailedAddress);
+            
+            // For city searches, try direct matching first
+            if (!isDetailedAddress && TryDirectCityMatch(address, out var coordinates))
             {
                 _logger.LogInformation("Direct city match found for: {Address}", address);
                 return coordinates;
@@ -84,7 +90,48 @@ namespace PBL3.Services.Implementations
                 // Format the bounding box string: west,south,east,north
                 string bboxString = string.Join(",", _vietnamBBox);
                 
-                // Build the suggest URL with Vietnam specific parameters
+                // For detailed street addresses, use the Geocoding API directly
+                if (isDetailedAddress)
+                {
+                    // Use Geocoding API for detailed addresses
+                    var geocodingUrl = $"https://api.mapbox.com/geocoding/v5/mapbox.places/{Uri.EscapeDataString(address)}.json" +
+                        $"?access_token={_mapboxAccessToken}" +
+                        $"&country=vn" + // Limit results to Vietnam
+                        $"&bbox={bboxString}" + // Use Vietnam bounding box
+                        $"&language=vi" + // Prefer Vietnamese results
+                        $"&limit=5" + // Get fewer but more relevant results                        $"&types=address,place" + // Focus on addresses and places
+                        $"&autocomplete=false"; // Complete search for exact address matching
+                    
+                    _logger.LogInformation("Using Geocoding API for detailed address: {Address}", address);
+                    
+                    var geocodingResponse = await _httpClient.GetAsync(geocodingUrl);
+                    
+                    if (geocodingResponse.IsSuccessStatusCode)
+                    {
+                        var geocodingContent = await geocodingResponse.Content.ReadAsStringAsync();                        var geocodingData = JsonDocument.Parse(geocodingContent);
+                        
+                        var geocodingFeatures = geocodingData.RootElement.GetProperty("features").EnumerateArray().ToList();
+                        
+                        if (geocodingFeatures.Count > 0)
+                        {
+                            // Extract coordinates from the first (most relevant) feature
+                            var center = geocodingFeatures[0].GetProperty("center").EnumerateArray().ToArray();
+                            
+                            // Mapbox returns coordinates as [longitude, latitude]
+                            double lng = center.Length > 0 ? center[0].GetDouble() : 108.206230;
+                            double lat = center.Length > 1 ? center[1].GetDouble() : 16.047079;
+                            
+                            _logger.LogInformation("Successfully geocoded detailed address: {Address} to ({Lat}, {Lng})", 
+                                address, lat, lng);
+                            
+                            return (lat, lng);
+                        }
+                    }
+                    
+                    _logger.LogWarning("Geocoding API failed for detailed address, falling back to SearchBox API");
+                }
+                
+                // For non-detailed addresses or if Geocoding API failed, use SearchBox API
                 var suggestUrl = $"https://api.mapbox.com/search/searchbox/v1/suggest" +
                     $"?q={Uri.EscapeDataString(address)}" +
                     $"&session_token={_sessionToken}" +
@@ -157,7 +204,9 @@ namespace PBL3.Services.Implementations
                 retrieveResponse.EnsureSuccessStatusCode();
 
                 var retrieveContent = await retrieveResponse.Content.ReadAsStringAsync();
-                var retrieveData = JsonDocument.Parse(retrieveContent);                // Extract coordinates from the first feature
+                var retrieveData = JsonDocument.Parse(retrieveContent);
+                
+                // Extract coordinates from the first feature
                 var features = retrieveData.RootElement.GetProperty("features").EnumerateArray();
                 
                 if (!features.MoveNext())
@@ -166,7 +215,8 @@ namespace PBL3.Services.Implementations
                     // Default coordinates for Da Nang
                     return (16.047079, 108.206230);
                 }
-                  var coordinateArray = features.Current.GetProperty("geometry").GetProperty("coordinates").EnumerateArray();
+                
+                var coordinateArray = features.Current.GetProperty("geometry").GetProperty("coordinates").EnumerateArray();
                 
                 // Mapbox returns coordinates as [longitude, latitude]
                 var longitude = coordinateArray.MoveNext() ? coordinateArray.Current.GetDouble() : 108.206230;
@@ -187,6 +237,34 @@ namespace PBL3.Services.Implementations
                 // Default coordinates for Da Nang
                 return (16.047079, 108.206230);
             }
+        }
+        
+        /// <summary>
+        /// Determines if an address is likely a detailed street address
+        /// </summary>
+        private bool IsLikelyStreetAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return false;
+                
+            // Check for number at the beginning (like "19 Đ.")
+            if (char.IsDigit(address[0]))
+                return true;
+                
+            // Check for common street indicators in Vietnamese
+            string[] streetIndicators = { "đường", "duong", "đ.", "d.", "phố", "pho", "ngõ", "ngo", "ngách", "ngach", "hẻm", "hem" };
+            foreach (var indicator in streetIndicators)
+            {
+                if (address.ToLower().Contains(indicator))
+                    return true;
+            }
+            
+            // Check for commas indicating multiple address parts
+            int commaCount = address.Count(c => c == ',');
+            if (commaCount >= 2) // At least street, ward, district
+                return true;
+                
+            return false;
         }
         
         /// <summary>
@@ -227,7 +305,8 @@ namespace PBL3.Services.Implementations
             coordinates = (16.047079, 108.206230); // Default to Da Nang
             return false;
         }
-          /// <summary>
+        
+        /// <summary>
         /// Find the best match from a list of suggestions for a Vietnamese address
         /// </summary>
         private JsonElement FindBestVietnameseMatch(List<JsonElement> suggestions, string address)
@@ -296,13 +375,19 @@ namespace PBL3.Services.Implementations
         {
             if (string.IsNullOrWhiteSpace(cityOrDistrict))
             {
-                _logger.LogWarning("Empty city/district provided to GetVietnameseLocationCoordinatesAsync");
+                _logger.LogWarning("Empty address provided to GetVietnameseLocationCoordinatesAsync");
                 // Default coordinates for Da Nang
                 return (16.047079, 108.206230);
             }
             
-            // First try direct matching from our dictionary of known Vietnamese cities
-            if (TryDirectCityMatch(cityOrDistrict, out var coordinates))
+            // Check if this might be a detailed street address
+            bool isDetailedAddress = IsLikelyStreetAddress(cityOrDistrict);
+            
+            _logger.LogInformation("Processing Vietnamese address: {Address}, Detected as detailed address: {IsDetailed}", 
+                cityOrDistrict, isDetailedAddress);
+            
+            // For city-only searches, try direct matching first
+            if (!isDetailedAddress && TryDirectCityMatch(cityOrDistrict, out var coordinates))
             {
                 _logger.LogInformation("Direct city match found for: {Address}", cityOrDistrict);
                 return coordinates;
@@ -310,19 +395,23 @@ namespace PBL3.Services.Implementations
             
             try
             {
-                // For Vietnamese cities/districts, we'll use a more specific approach
                 // Format the bounding box string: west,south,east,north
                 string bboxString = string.Join(",", _vietnamBBox);
+                  // Select appropriate types parameter based on whether this is a detailed address or not
+                string typesParam = isDetailedAddress 
+                    ? "address,place,neighborhood,district,locality" // For detailed addresses, prioritize address and place types
+                    : "place,district,locality,neighborhood";          // For general searches, prioritize administrative divisions
                 
                 // Build the URL with Vietnamese-specific parameters
-                // Use the Mapbox Geocoding API instead of SearchBox for better administrative area matches
+                // For detailed addresses, use the Geocoding API as it's better for precise locations
                 var geocodingUrl = $"https://api.mapbox.com/geocoding/v5/mapbox.places/{Uri.EscapeDataString(cityOrDistrict)}.json" +
                     $"?access_token={_mapboxAccessToken}" +
                     $"&country=vn" + // Limit results to Vietnam
                     $"&bbox={bboxString}" + // Use Vietnam bounding box
                     $"&language=vi" + // Prefer Vietnamese results
                     $"&limit=5" + // Get top 5 matches
-                    $"&types=place,district,locality,neighborhood"; // Focus on administrative divisions
+                    $"&types={typesParam}" + // Types based on address detail level
+                    $"&autocomplete=false"; // Complete search for exact address matching
                 
                 _logger.LogInformation("Using Geocoding API for Vietnamese location: {Url}", geocodingUrl);
                 
@@ -400,6 +489,78 @@ namespace PBL3.Services.Implementations
                 
                 // Fall back to standard method
                 return await GetCoordinatesFromAddressAsync(cityOrDistrict);
+            }
+        }
+        
+        /// <summary>
+        /// Gets coordinates for a detailed Vietnamese street address using the Geocoding API instead of SearchBox
+        /// </summary>
+        private async Task<(double latitude, double longitude)> GetCoordinatesForDetailedAddressAsync(string detailedAddress)
+        {
+            try
+            {
+                // Format the bounding box string: west,south,east,north
+                string bboxString = string.Join(",", _vietnamBBox);
+                
+                // For detailed addresses, use the Geocoding API as it's better for precise locations
+                var geocodingUrl = $"https://api.mapbox.com/geocoding/v5/mapbox.places/{Uri.EscapeDataString(detailedAddress)}.json" +
+                    $"?access_token={_mapboxAccessToken}" +
+                    $"&country=vn" + // Limit results to Vietnam
+                    $"&bbox={bboxString}" + // Use Vietnam bounding box                    $"&language=vi" + // Prefer Vietnamese results
+                    $"&limit=5" + // Get top 5 matches
+                    $"&types=address,place,neighborhood" + // Focus on addresses and places
+                    $"&autocomplete=false"; // Complete search for exact address matching
+                
+                _logger.LogInformation("Using Geocoding API for detailed address: {Url}", geocodingUrl);
+                
+                var response = await _httpClient.GetAsync(geocodingUrl);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Mapbox Geocoding API call failed with status: {Status}, Response: {Response}", 
+                        response.StatusCode, errorContent);
+                    
+                    // When debugging is enabled, stop execution here
+                    System.Diagnostics.Debugger.Break();
+                    
+                    // Default coordinates for Da Nang
+                    return (16.047079, 108.206230);
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var data = JsonDocument.Parse(content);
+                
+                var features = data.RootElement.GetProperty("features").EnumerateArray().ToList();
+                
+                if (features.Count == 0)
+                {
+                    _logger.LogWarning("No geocoding results found for detailed address: {Address}", detailedAddress);
+                    // Default coordinates for Da Nang
+                    return (16.047079, 108.206230);
+                }
+                
+                // Extract coordinates from the first (most relevant) feature
+                var center = features[0].GetProperty("center").EnumerateArray().ToArray();
+                
+                // Mapbox returns coordinates as [longitude, latitude]
+                double lng = center.Length > 0 ? center[0].GetDouble() : 108.206230;
+                double lat = center.Length > 1 ? center[1].GetDouble() : 16.047079;
+                
+                _logger.LogInformation("Successfully geocoded detailed address: {Address} to coordinates: ({Lat}, {Lng})", 
+                    detailedAddress, lat, lng);
+                
+                return (lat, lng);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error geocoding detailed address: {Address}", detailedAddress);
+                
+                // When debugging is enabled, stop execution here
+                System.Diagnostics.Debugger.Break();
+                
+                // Default coordinates for Da Nang
+                return (16.047079, 108.206230);
             }
         }
     }
