@@ -208,7 +208,7 @@ namespace PBL3.Services.Implementations
             return _context.CuisineTypes
                 .OrderBy(c => c.Name)
                 .ToListAsync();
-        }/// <summary>
+        }        /// <summary>
         /// Chuẩn hóa địa chỉ và tọa độ với giá trị mặc định cho Đà Nẵng
         /// </summary>
         public async Task<(string address, double latitude, double longitude, double radiusInKm)> NormalizeLocationParameters(
@@ -237,9 +237,10 @@ namespace PBL3.Services.Implementations
             {
                 try
                 {
-                    var coords = await _geoLocationService.GetCoordinatesFromAddressAsync(address!);
+                    // Use the specialized Vietnamese location method for better accuracy
+                    var coords = await _geoLocationService.GetVietnameseLocationCoordinatesAsync(address!);
                     
-                    _logger.LogInformation("Address '{Address}' geocoded to coordinates: ({Lat}, {Lng})", 
+                    _logger.LogInformation("Vietnamese address '{Address}' geocoded to coordinates: ({Lat}, {Lng})", 
                         address, coords.latitude, coords.longitude);
                         
                     return (address, coords.latitude, coords.longitude, defaultRadius);

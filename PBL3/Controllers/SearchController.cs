@@ -30,7 +30,8 @@ namespace PBL3.Controllers
             ViewBag.MapboxToken = _config["Mapbox:AccessToken"];
             ViewBag.CuisineTypes = await _restaurantService.GetAllCuisineTypesAsync();
 
-            // Chuẩn hóa thông tin vị trí và bán kính tìm kiếm
+            // Chuẩn hóa thông tin vị trí và bán kính tìm kiếm - using enhanced Vietnamese geocoding
+            _logger.LogInformation("Processing search with address: {Address}", Address);
             var normalizedLocation = await _restaurantService.NormalizeLocationParameters(Address, null, null, maxDistance);
             
             var svm = new SearchViewModel
