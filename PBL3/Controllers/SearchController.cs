@@ -25,14 +25,18 @@ namespace PBL3.Controllers
             _restaurantService = restaurantService ?? throw new ArgumentNullException(nameof(restaurantService));
             _geoLocationService = geoLocationService ?? throw new ArgumentNullException(nameof(geoLocationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }public async Task<IActionResult> Index(string searchTerm = "", string Address = "", int page = 1, int pageSize = 10, IEnumerable<int>? tagIds = null, IEnumerable<int>? cuisineTypeIds = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string maxDistance = "")
-        {            //Mapbox token
+        }public async Task<IActionResult> Index(string searchTerm = "", string Address = "", int page = 1, int pageSize = 10, IEnumerable<int>? tagIds = null, IEnumerable<int>? cuisineTypeIds = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string maxDistance = "", double? lat = null, double? lng = null)
+        {
+            //logging for detecting if controller is getting called
+            _logger.LogInformation("SearchController Index action called with parameters: SearchTerm={SearchTerm}, Address={Address}, Page={Page}, PageSize={PageSize}, TagIds={TagIds}, CuisineTypeIds={CuisineTypeIds}, SortBy={SortBy}, MinPrice={MinPrice}, MaxPrice={MaxPrice}, MaxDistance={MaxDistance}, Lat={Lat}, Lng={Lng}", 
+                searchTerm, Address, page, pageSize, tagIds, cuisineTypeIds, sortBy, minPrice, maxPrice, maxDistance, lat, lng);        
+            //Mapbox token
             ViewBag.MapboxToken = _config["Mapbox:AccessToken"];
             ViewBag.CuisineTypes = await _restaurantService.GetAllCuisineTypesAsync();
 
             // Chuẩn hóa thông tin vị trí và bán kính tìm kiếm - using enhanced Vietnamese geocoding
-            _logger.LogInformation("Processing search with address: {Address}", Address);
-            var normalizedLocation = await _restaurantService.NormalizeLocationParameters(Address, null, null, maxDistance);
+            _logger.LogInformation("Processing search with address: {Address}, Lat: {Lat}, Lng: {Lng}", Address, lat, lng);
+            var normalizedLocation = await _restaurantService.NormalizeLocationParameters(Address, lat, lng, maxDistance);
             
             var svm = new SearchViewModel
             {

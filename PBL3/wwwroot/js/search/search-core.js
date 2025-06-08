@@ -1,7 +1,7 @@
 /**
  * Search Core Module
  * Main search functionality for the application
- * Phase 2: Basic search without location services
+ * Phase 2+: Enhanced search with location services
  */
 var SearchCore = (function() {
     'use strict';
@@ -51,7 +51,7 @@ var SearchCore = (function() {
     function bindEvents() {
         if (!searchForm) return;
 
-        // Form submission
+        // Form submission 
         searchForm.addEventListener('submit', handleSubmit);
 
         // Location input focus/blur
@@ -60,7 +60,7 @@ var SearchCore = (function() {
             locationInput.addEventListener('blur', hideLocationDropdownDelayed);
         }
 
-        // Use current location button (disabled for Phase 2)
+        // Use current location button
         if (useLocationButton) {
             useLocationButton.addEventListener('click', handleLocationButtonClick);
         }
@@ -149,19 +149,104 @@ var SearchCore = (function() {
                 locationDropdown.classList.remove('show');
             }
         }, 200);
-    }
-
-    // Handle location button click (disabled for Phase 2)
+    }    // Handle location button click - Get current geolocation
     function handleLocationButtonClick(event) {
         event.preventDefault();
         event.stopPropagation();
         
-        // Show message that location services are not available in this phase
-        alert('Location services will be available in a future update. Please enter your location manually.');
+        // Check if geolocation is available in browser
+        if (!navigator.geolocation) {
+            alert('Vị trí hiện tại không được hỗ trợ trong trình duyệt của bạn. Vui lòng nhập vị trí thủ công.');
+            return;
+        }
         
-        // Hide dropdown
-        if (locationDropdown) {
-            locationDropdown.classList.remove('show');
+        // Show loading state on the button
+        if (useLocationButton) {
+            const originalText = useLocationButton.innerHTML;
+            useLocationButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lấy vị trí...';
+            useLocationButton.disabled = true;
+            
+            // Store original button content for restoration later
+            useLocationButton.dataset.originalText = originalText;
+        }
+        
+        // Set timeout for geolocation request
+        const geoOptions = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+        
+        // Request geolocation
+        navigator.geolocation.getCurrentPosition(
+            // Success handler
+            function(position) {
+                console.log('Got position:', position.coords.latitude, position.coords.longitude);
+                
+                // Update hidden fields with coordinates
+                if (latInput) latInput.value = position.coords.latitude;
+                if (lngInput) lngInput.value = position.coords.longitude;
+                
+                // Update location input with placeholder text
+                if (locationInput) locationInput.value = 'Vị trí hiện tại của bạn';
+                
+                // Restore button state
+                restoreLocationButton();
+                
+                // Hide dropdown
+                if (locationDropdown) {
+                    locationDropdown.classList.remove('show');
+                }
+                  // Reset field names for proper form submission (critical for controller to receive params)
+                if (searchInput) {
+                    searchInput.setAttribute('name', 'searchTerm');
+                }
+                
+                if (locationInput) {
+                    locationInput.setAttribute('name', 'Address');
+                }
+                
+                // Auto-submit the form to update results with new location
+                if (searchForm) {
+                    showLoadingState();
+                    searchForm.submit();
+                }
+            },
+            // Error handler
+            function(error) {
+                console.error('Geolocation error:', error);
+                
+                let errorMessage;
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Truy cập vị trí bị từ chối. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt của bạn.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Thông tin vị trí không có sẵn. Vui lòng thử lại sau.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Quá thời gian yêu cầu vị trí. Vui lòng thử lại.';
+                        break;
+                    default:
+                        errorMessage = 'Lỗi không xác định khi lấy vị trí. Vui lòng thử lại sau.';
+                }
+                
+                alert(errorMessage);
+                
+                // Restore button state
+                restoreLocationButton();
+            },
+            // Options
+            geoOptions
+        );
+    }
+    
+    // Helper function to restore location button state
+    function restoreLocationButton() {
+        if (useLocationButton && useLocationButton.dataset.originalText) {
+            useLocationButton.innerHTML = useLocationButton.dataset.originalText;
+            useLocationButton.disabled = false;
+            delete useLocationButton.dataset.originalText;
         }
     }
 

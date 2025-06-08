@@ -254,7 +254,15 @@ namespace PBL3.Services.Implementations
                 defaultRadius = radius;
             }
             
-            // If we have explicit coordinates, use those
+            // Special case: If address is "Vị trí hiện tại của bạn" and we have coordinates, use them directly
+            if (address == "Vị trí hiện tại của bạn" && latitude.HasValue && longitude.HasValue)
+            {
+                _logger.LogInformation("Using provided coordinates for current location: ({Lat}, {Lng})", 
+                    latitude.Value, longitude.Value);
+                return (address, latitude.Value, longitude.Value, defaultRadius);
+            }
+            
+            // If we have explicit coordinates for any other address, use those
             if (latitude.HasValue && longitude.HasValue)
             {
                 return (address, latitude.Value, longitude.Value, defaultRadius);
