@@ -11,6 +11,7 @@ let scatterCheckInProgress = false; // Prevent infinite loops when checking scat
 let lastScatterCheck = 0; // Timestamp of last scatter check for debouncing
 let currentScatterState = 'original'; // Track current state: 'original', 'scattered'
 let zoomChangeInProgress = false; // Track if zoom change is in progress
+let manualScatterActive = false; // Track if scattering was triggered manually (cluster clicks) vs automatically (zoom)
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', function () {
@@ -50,18 +51,71 @@ function initializeMap() {
         // Add navigation controls
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');        // Store initial zoom level
         currentZoomLevel = map.getZoom();
-        console.log('Initial zoom level:', currentZoomLevel);
-          // Add event listener for zoom changes - only use idle event to avoid conflicts
+        console.log('Initial zoom level:', currentZoomLevel);        // Add event listener for zoom changes - only use idle event to avoid conflicts
         map.on('zoom', function () {
             const newZoomLevel = map.getZoom();
             console.log('Current zoom level:', newZoomLevel);
+            
+            // If we're zooming out from scatter mode and have an open popup, close it
+            if (currentZoomLevel >= 15 && newZoomLevel < 15 && currentPopup) {
+                console.log('Zooming out from scatter mode, checking popup type');
+                // Check if this popup is from scattered markers by checking its class
+                const popupElement = currentPopup.getElement();
+                if (popupElement && popupElement.classList.contains('scattered-popup')) {
+                    console.log('Confirmed popup is from scattered marker, removing');
+                    currentPopup.remove();
+                    currentPopup = null;
+                } else {
+                    console.log('Popup is not from scattered marker, keeping it');
+                }
+            }
+            
             currentZoomLevel = newZoomLevel;
             zoomChangeInProgress = true; // Mark that zoom is changing
         });
-        
+          
         map.on('zoomend', function () {
+            const finalZoomLevel = map.getZoom();
             zoomChangeInProgress = false; // Mark that zoom change is complete
-            console.log('Zoom ended at level:', map.getZoom());
+            console.log('Zoom ended at level:', finalZoomLevel);
+            
+            // Additional cleanup when zoom ends - ensure cluster click handlers are still active
+            // This helps with the issue where clusters become unclickable after zooming
+            if (finalZoomLevel < 15) {
+                // If we zoomed out below scatter threshold, ensure any scattered marker popup is closed
+                // Double-check for any remaining scattered popups that might not have been caught during zoom
+                if (currentPopup) {
+                    const popupElement = currentPopup.getElement();
+                    if (popupElement && popupElement.classList.contains('scattered-popup')) {
+                        console.log('Zoom ended below scatter threshold, closing scattered marker popup');
+                        currentPopup.remove();
+                        currentPopup = null;
+                    }
+                }
+                
+                // Also check for any scattered popups that might exist without being tracked in currentPopup
+                const allScatteredPopups = document.querySelectorAll('.mapboxgl-popup.scattered-popup');
+                if (allScatteredPopups.length > 0) {
+                    console.log(`Found ${allScatteredPopups.length} untracked scattered popups, removing them`);
+                    allScatteredPopups.forEach(popup => {
+                        const closeButton = popup.querySelector('.mapboxgl-popup-close-button');
+                        if (closeButton) {
+                            closeButton.click();
+                        } else {
+                            popup.remove();
+                        }
+                    });
+                }
+                
+                // Re-ensure cluster event handlers are active
+                setTimeout(() => {
+                    const clusterLayer = map.getLayer('clusters');
+                    if (clusterLayer) {
+                        console.log('Re-verifying cluster click handlers after zoom end');
+                        ensureClusterClickHandlers();
+                    }
+                }, 100);
+            }
         });
         
         // Wait for map to load before adding markers
@@ -503,26 +557,46 @@ function loadRestaurantsFromList() {
                             console.error('Error getting cluster leaves:', err);
                             fallbackToZoom();
                             return;
-                        }
+                        }                        console.log(`Retrieved ${clusterFeatures.length} points from cluster`);
 
-                        console.log(`Retrieved ${clusterFeatures.length} points from cluster`);                        // Check if we're at zoom level 15 or higher - use scattered markers
-                        if (currentZoom >= 15 && clusterFeatures.length > 1) {
+                        // Debug the condition logic
+                        console.log('=== CLUSTER CLICK CONDITION EVALUATION ===');
+                        console.log('Current zoom:', currentZoom);
+                        console.log('Zoom >= 15?', currentZoom >= 15);
+                        console.log('Cluster features length:', clusterFeatures.length);
+                        console.log('Features > 3?', clusterFeatures.length > 3);
+                        console.log('Combined condition (zoom >= 15 && features > 3):', currentZoom >= 15 && clusterFeatures.length > 3);
+
+                        // For small clusters (≤3 items), always use spider legs regardless of zoom
+                        // For larger clusters at high zoom (≥15), use scattered markers to avoid overlap
+                        if (currentZoom >= 15 && clusterFeatures.length > 3) {
                             try {
-                                // Use the new scatter marker algorithm
-                                visualizationApplied = scatterMarkers(clusterCenter, clusterFeatures, map);
+                                console.log('=== MANUAL SCATTERING TRIGGERED BY CLUSTER CLICK (LARGE CLUSTER) ===');
+                                console.log('Large cluster detected:', clusterFeatures.length, 'items at zoom', currentZoom);
+                                manualScatterActive = true; // Set manual scatter flag
+                                // Use the new scatter marker algorithm with correct parameters
+                                visualizationApplied = scatterMarkers(clusterFeatures, 0);
                                 console.log('Scattered markers applied successfully:', visualizationApplied);
                             } catch (error) {
                                 console.error('Error applying scattered markers:', error);
                                 fallbackToZoom();
                             }
-                        }
-                        // Otherwise, use traditional spiderifier if available and we have multiple features
+                        }                        // Use spider legs for all other clusters (small clusters or any cluster at lower zoom)
                         else if (spiderifier && clusterFeatures.length > 1) {
                             // Apply spiderifier to show all points in this cluster
                             try {
+                                console.log('=== SPIDERIFIER PATH REACHED IN CLUSTER CLICK ===');
+                                console.log('Using spider legs because:');
+                                console.log('- Zoom < 15 OR cluster size <= 3');
+                                console.log('- Current zoom:', currentZoom);
+                                console.log('- Cluster features count:', clusterFeatures.length);
+                                console.log('- Cluster center:', clusterCenter);
+                                console.log('- Spiderifier instance:', spiderifier);
+                                
                                 // Create LngLat object from cluster center coordinates
                                 const centerLngLat = new mapboxgl.LngLat(clusterCenter[0], clusterCenter[1]);                                // Spiderify the cluster features - this method doesn't return anything
-                                spiderifier.spiderfy(features[0].geometry.coordinates, clusterFeatures);
+                                console.log('Calling spiderifier.spiderfy with center:', clusterCenter);
+                                spiderifier.spiderfy(clusterCenter, clusterFeatures);
                                 
                                 console.log('Spiderifier executed successfully');
 
@@ -794,6 +868,39 @@ function cleanupSpiderifier() {
         cleanupScatteredMarkers();
     }
 }
+
+// Helper function to clean up scattered marker popups specifically
+function cleanupScatteredPopups() {
+    console.log('Cleaning up scattered marker popups...');
+    
+    // Close tracked scattered popup
+    if (currentPopup) {
+        const popupElement = currentPopup.getElement();
+        if (popupElement && popupElement.classList.contains('scattered-popup')) {
+            console.log('Closing tracked scattered marker popup');
+            currentPopup.remove();
+            currentPopup = null;
+        }
+    }
+    
+    // Also clean up any untracked scattered popups
+    const allScatteredPopups = document.querySelectorAll('.mapboxgl-popup.scattered-popup');
+    if (allScatteredPopups.length > 0) {
+        console.log(`Found ${allScatteredPopups.length} untracked scattered popups, removing them`);
+        allScatteredPopups.forEach(popup => {
+            try {
+                const closeButton = popup.querySelector('.mapboxgl-popup-close-button');
+                if (closeButton) {
+                    closeButton.click();
+                } else {
+                    popup.remove();
+                }
+            } catch (error) {
+                console.warn('Error removing scattered popup:', error);
+            }
+        });
+    }
+}
 // Global handlers for spiderifier cleanup
 function unspiderifyWhenClickingElsewhere(e) { 
     // Check if spiderifier is active by looking at its container
@@ -993,11 +1100,18 @@ function checkZoomForScatterView(zoomLevel) {
     console.log('Current zoom level:', zoomLevel);
     console.log('Scatter threshold: 15');
     console.log('Current scatter state:', currentScatterState);
+    console.log('Manual scatter active:', manualScatterActive);
     console.log('Scatter check in progress:', scatterCheckInProgress);
     
     // Prevent feedback loops
     if (scatterCheckInProgress) {
         console.log('Scatter check already in progress, skipping');
+        return;
+    }
+    
+    // Don't interfere with manual scattering
+    if (manualScatterActive) {
+        console.log('Manual scattering is active, automatic scattering disabled');
         return;
     }
     
@@ -1081,35 +1195,25 @@ function checkZoomForScatterView(zoomLevel) {
                         console.log(`Group ${groupIndex + 1} has only 1 marker, skipping scatter`);
                     }
                 });            } else {
-                console.log('No groups need scattering, keeping original markers visible');
-                // Clean up any existing scattered markers and show originals
+                console.log('No groups need scattering, keeping original markers visible');                // Clean up any existing scattered markers and show originals
                 if (currentScatterState === 'scattered') {
-                    // Close any existing popup before transitioning back to original
-                    if (currentPopup) {
-                        console.log('Closing existing popup before showing original markers');
-                        currentPopup.remove();
-                        currentPopup = null;
-                    }
+                    // Clean up scattered marker popups before transitioning back to original
+                    cleanupScatteredPopups();
                     
                     cleanupScatteredMarkers();
                     showOriginalMarkers();
                     currentScatterState = 'original';
                 }
-            }} else {
-            console.log('Zoom level < 15, transitioning to original state');
+            }        } else {            console.log('Zoom level < 15, transitioning to original state');
             if (currentScatterState === 'scattered') {
-                // Close any existing popup before transitioning back to original
-                if (currentPopup) {
-                    console.log('Closing existing popup before showing original markers');
-                    currentPopup.remove();
-                    currentPopup = null;
-                }
+                // Clean up scattered marker popups before transitioning back to original
+                cleanupScatteredPopups();
                 
                 cleanupScatteredMarkers();
                 showOriginalMarkers();
                 currentScatterState = 'original';
             }
-        }    } catch (error) {
+        }} catch (error) {
         console.error('Error in checkZoomForScatterView:', error);
         // In case of error, ensure original markers are shown and scattered markers are cleaned up
         // Close any existing popup to prevent stale popups
@@ -1190,9 +1294,14 @@ function showOriginalMarkers() {
             map.setLayoutProperty('cluster-count', 'visibility', 'visible');
             console.log('Shown cluster-count layer');
         }
-        
-        // Reset the scattered markers flag
+          // Reset all scatter-related flags
         scatteredMarkersActive = false;
+        manualScatterActive = false; // Reset manual scatter flag when showing original markers
+        
+        // Verify cluster click handlers are still active after showing original markers
+        setTimeout(() => {
+            ensureClusterClickHandlers();
+        }, 100);
         
     } catch (error) {
         console.error('Error showing original markers:', error);
@@ -1205,6 +1314,16 @@ function groupNearbyMarkers(features, radiusPixels = 50) {
     console.log('Input features:', features.length);
     console.log('Radius pixels:', radiusPixels);
     
+    // Debug: Log what we're getting as input
+    features.forEach((feature, index) => {
+        console.log(`Input feature ${index}:`, {
+            type: typeof feature,
+            hasGeometry: !!(feature && feature.geometry),
+            hasCoordinates: !!(feature && feature.geometry && feature.geometry.coordinates),
+            coordinates: feature && feature.geometry ? feature.geometry.coordinates : 'none'
+        });
+    });
+    
     const groups = [];
     const processed = new Set();
     
@@ -1214,8 +1333,20 @@ function groupNearbyMarkers(features, radiusPixels = 50) {
             return;
         }
         
-        const featurePoint = map.project(feature.geometry.coordinates);
-        console.log(`Feature ${index} screen position:`, featurePoint);
+        // Validate feature structure before processing
+        if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+            console.error(`Feature ${index} has invalid structure, skipping:`, feature);
+            return;
+        }
+        
+        let featurePoint;
+        try {
+            featurePoint = map.project(feature.geometry.coordinates);
+            console.log(`Feature ${index} screen position:`, featurePoint);
+        } catch (error) {
+            console.error(`Error projecting feature ${index}:`, error, feature);
+            return;
+        }
         
         const group = [feature];
         processed.add(index);
@@ -1223,7 +1354,20 @@ function groupNearbyMarkers(features, radiusPixels = 50) {
         // Find nearby features
         features.forEach((otherFeature, otherIndex) => {
             if (otherIndex !== index && !processed.has(otherIndex)) {
-                const otherPoint = map.project(otherFeature.geometry.coordinates);
+                // Validate other feature structure
+                if (!otherFeature || !otherFeature.geometry || !otherFeature.geometry.coordinates) {
+                    console.error(`Other feature ${otherIndex} has invalid structure, skipping:`, otherFeature);
+                    return;
+                }
+                
+                let otherPoint;
+                try {
+                    otherPoint = map.project(otherFeature.geometry.coordinates);
+                } catch (error) {
+                    console.error(`Error projecting other feature ${otherIndex}:`, error, otherFeature);
+                    return;
+                }
+                
                 const distance = Math.sqrt(
                     Math.pow(featurePoint.x - otherPoint.x, 2) + 
                     Math.pow(featurePoint.y - otherPoint.y, 2)
@@ -1264,19 +1408,43 @@ function calculateGroupCenter(group) {
     group.forEach((feature, index) => {
         let coords = null;
         
-        // Try multiple ways to access coordinates
-        if (feature && feature.geometry && feature.geometry.coordinates) {
-            coords = feature.geometry.coordinates;
-        } else if (feature && feature.coordinates) {
-            coords = feature.coordinates;
-        } else if (feature && typeof feature.getLngLat === 'function') {
-            const lngLat = feature.getLngLat();
-            coords = [lngLat.lng, lngLat.lat];
-        } else {
-            console.error(`Feature ${index} structure:`, feature);
+        // Debug: log what we're actually getting
+        console.log(`Feature ${index} type:`, typeof feature);
+        console.log(`Feature ${index} structure:`, feature);
+        
+        // Handle case where feature might be a primitive (number) - this shouldn't happen but let's be safe
+        if (typeof feature === 'number') {
+            console.error(`Feature ${index} is a number (${feature}) instead of an object - this indicates a bug in grouping logic`);
+            return; // Skip this iteration
         }
         
-        if (coords && Array.isArray(coords) && coords.length >= 2) {
+        // Handle case where feature might be an array [lng, lat]
+        if (Array.isArray(feature) && feature.length >= 2 && typeof feature[0] === 'number' && typeof feature[1] === 'number') {
+            console.log(`Feature ${index} appears to be a coordinate array:`, feature);
+            coords = feature;
+        }
+        // Normal GeoJSON feature structure
+        else if (feature && feature.geometry && feature.geometry.coordinates) {
+            coords = feature.geometry.coordinates;
+        } 
+        // Direct coordinates property
+        else if (feature && feature.coordinates) {
+            coords = feature.coordinates;
+        } 
+        // Mapbox marker object
+        else if (feature && typeof feature.getLngLat === 'function') {
+            const lngLat = feature.getLngLat();
+            coords = [lngLat.lng, lngLat.lat];
+        }
+        // Try properties if it's a malformed feature
+        else if (feature && feature.properties && feature.properties.coordinates) {
+            coords = feature.properties.coordinates;
+        }
+        else {
+            console.error(`Feature ${index} structure unrecognized:`, feature);
+        }
+        
+        if (coords && Array.isArray(coords) && coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
             console.log(`Feature ${index} coords:`, coords);
             totalLng += coords[0];
             totalLat += coords[1];
@@ -1600,8 +1768,9 @@ function cleanupScatteredMarkers() {
     // Store whether markers were active before resetting flag
     const wereMarkersActive = scatteredMarkersActive;
     
-    // Reset the flag - we always do this regardless
+    // Reset all scatter-related flags
     scatteredMarkersActive = false;
+    manualScatterActive = false; // Reset manual scatter flag
     
     // Remove event listeners for map movement
     map.off('move', updateScatteredMarkers);
@@ -1671,3 +1840,33 @@ function testScatterMarkers() {
 
 // Make test function globally available
 window.testScatterMarkers = testScatterMarkers;
+
+// Utility function to ensure cluster click handlers remain active
+function ensureClusterClickHandlers() {
+    // This function helps debug cluster click functionality
+    // if it gets lost during zoom transitions
+    
+    console.log('=== ENSURING CLUSTER CLICK HANDLERS ===');
+    
+    if (!map || !map.getLayer('clusters')) {
+        console.log('No clusters layer found, handlers not needed');
+        return false;
+    }
+    
+    try {
+        // Query for any clusters on the map to test if they're responsive
+        const clusteredFeatures = map.queryRenderedFeatures({ layers: ['clusters'] });
+        console.log(`Found ${clusteredFeatures.length} cluster features on map`);
+        
+        if (clusteredFeatures.length > 0) {
+            console.log('Clusters are present, cluster handlers should be active from loadRestaurantsFromList');
+            return true;
+        } else {
+            console.log('No clusters currently visible');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error ensuring cluster handlers:', error);
+        return false;
+    }
+}
