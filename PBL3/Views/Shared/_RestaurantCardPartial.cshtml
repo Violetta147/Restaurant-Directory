@@ -7,7 +7,11 @@
         <div class="restaurant-card restaurant-item" 
              data-id="@restaurant.Id" 
              data-lat="@restaurant.Latitude" 
-             data-lng="@restaurant.Longitude">
+             data-lng="@restaurant.Longitude"
+             data-name="@restaurant.Name"
+             data-rating="@restaurant.AverageRating.ToString("0.0")"
+             data-review-count="@restaurant.ReviewCount"
+             data-address="@restaurant.FullAddress">
             <div class="row g-0 align-items-center">
                 <div class="col-auto">
                     <img src="@restaurant.CardImageUrl" class="rounded-start" alt="@restaurant.Name" style="width: 90px; height: 90px; object-fit: cover;">

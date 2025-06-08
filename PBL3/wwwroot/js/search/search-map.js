@@ -4,8 +4,13 @@ let markers = [];
 let currentPopup = null;
 let mapisDragging = false;
 let mapMoved = false;
-let spiderifier = null; // Spiderifier instance
-let currentZoomLevel = 0; // Track current zoom level
+let spiderifier = null;
+let currentZoomLevel = 0;
+let scatteredMarkersActive = false; // Track whether scattered markers are currently displayed
+let scatterCheckInProgress = false; // Prevent infinite loops when checking scatter conditions
+let lastScatterCheck = 0; // Timestamp of last scatter check for debouncing
+let currentScatterState = 'original'; // Track current state: 'original', 'scattered'
+let zoomChangeInProgress = false; // Track if zoom change is in progress
 
 // Initialize map when page loads
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,10 +34,11 @@ function initializeMap() {
 
     console.log('Map config:', { lat: initialLat, lng: initialLng });
 
-    try {
-        // Set Mapbox access token
+    try {        // Set Mapbox access token
         mapboxgl.accessToken = mapboxToken;
-        console.log('Mapbox access token set:', mapboxgl.accessToken);        // Initialize map
+        console.log('Mapbox access token set:', mapboxgl.accessToken);
+        
+        // Initialize map
         map = new mapboxgl.Map({
             container: 'mapbox-container',
             style: 'mapbox://styles/mapbox/streets-v12',
@@ -42,21 +48,42 @@ function initializeMap() {
         });
 
         // Add navigation controls
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-        // Store initial zoom level
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');        // Store initial zoom level
         currentZoomLevel = map.getZoom();
         console.log('Initial zoom level:', currentZoomLevel);
-
-        // Add event listener for zoom changes
+          // Add event listener for zoom changes - only use idle event to avoid conflicts
         map.on('zoom', function () {
             const newZoomLevel = map.getZoom();
             console.log('Current zoom level:', newZoomLevel);
             currentZoomLevel = newZoomLevel;
-        });        // Wait for map to load before adding markers
+            zoomChangeInProgress = true; // Mark that zoom is changing
+        });
+        
+        map.on('zoomend', function () {
+            zoomChangeInProgress = false; // Mark that zoom change is complete
+            console.log('Zoom ended at level:', map.getZoom());
+        });
+        
+        // Wait for map to load before adding markers
         map.on('load', function () {
             console.log('Map loaded successfully');
-            console.log('Map zoom level at load:', map.getZoom());
+            console.log('Map zoom level at load:', map.getZoom());            // Add event listener to check for scatter view when map becomes idle
+            // (after panning, zooming, etc.) - use only this event to avoid double-triggering
+            map.on('idle', function() {
+                // Prevent feedback loops from our own operations with enhanced checks
+                if (!scatterCheckInProgress && !zoomChangeInProgress) {
+                    // Add debouncing to prevent rapid successive calls
+                    const now = Date.now();
+                    if (now - lastScatterCheck < 500) { // 500ms debounce
+                        console.log('Debouncing scatter check, too soon since last check');
+                        return;
+                    }
+                    
+                    lastScatterCheck = now;
+                    // Check if we need to scatter markers based on current zoom level
+                    checkZoomForScatterView(map.getZoom());
+                }
+            });
 
             // Initialize spiderifier after map loads
             console.log('Initializing spiderifier...');
@@ -131,10 +158,10 @@ function initializeMap() {
                         pin.addEventListener('mouseleave', function () {
                             pin.style.transform = 'scale(1)';
                             pin.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                        });
-
-                        console.log('Leg pin styled:', pin.style.cssText);
-                    },                    onClick: function (e, feature) {
+                        });                        console.log('Leg pin styled:', pin.style.cssText);
+                    },
+                    
+                    onClick: function (e, feature) {
                         e.stopPropagation(); // Prevent event bubbling
                         console.log('Spider leg clicked:', e, feature);
                         
@@ -207,13 +234,12 @@ function initializeMap() {
                                 lng: feature.geometry.coordinates[0],
                                 lat: feature.geometry.coordinates[1]
                             };
-                            console.log('Error fallback: Using original coordinates:', popupCoords);
-                        }
+                            console.log('Error fallback: Using original coordinates:', popupCoords);                        }
                         
                         // Create and show the popup
                         const popup = new mapboxgl.Popup({
-                            closeButton: true,
-                            closeOnClick: false,
+                            closeButton: false,
+                            closeOnClick: true,
                             className: 'spider-popup',
                             maxWidth: '300px',
                             offset: [0, -18],
@@ -314,9 +340,7 @@ function loadRestaurantsFromList() {
         if (map.getLayer('unclustered-point-label')) map.removeLayer('unclustered-point-label');
         map.removeSource('restaurants');
         console.log('Removed existing cluster layers and source');
-    }
-
-    // Process restaurant cards and create features for clustering
+    }    // Process restaurant cards and create features for clustering
     restaurantCards.forEach((card, index) => {
         const lat = parseFloat(card.dataset.lat);
         const lng = parseFloat(card.dataset.lng);
@@ -325,6 +349,15 @@ function loadRestaurantsFromList() {
         const reviewCount = card.dataset.reviewCount || card.querySelector('.text-muted.small')?.textContent.match(/\((\d+) reviews\)/)?.[1] || '0';
         const address = card.dataset.address || card.querySelector('.bi-geo-alt')?.parentNode?.textContent.trim() || '';
         const id = card.dataset.id;
+
+        console.log(`Processing card ${index + 1}:`, {
+            name: name,
+            rating: rating, 
+            reviewCount: reviewCount,
+            address: address,
+            coordinates: { lat, lng },
+            hasValidCoords: !isNaN(lat) && !isNaN(lng)
+        });
 
         if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
             console.log(`Adding feature for: ${name} at (${lat}, ${lng})`);
@@ -367,12 +400,10 @@ function loadRestaurantsFromList() {
             });
         } catch (error) {
             console.warn('Error fitting bounds:', error);
-        }
-
-        // Add cluster layers if features exist
+        }        // Add cluster layers if features exist
         if (features.length > 0) {
             console.log('Setting up clustering with features:', features.length);
-
+            
             // Add a new source with clustering enabled
             map.addSource('restaurants', {
                 type: 'geojson',
@@ -381,7 +412,7 @@ function loadRestaurantsFromList() {
                     features: features
                 },
                 cluster: true,
-                clusterMaxZoom: 14, // Max zoom to cluster points on
+                clusterMaxZoom: 16, // Max zoom to cluster points on (at zoom 15+ our scatter algorithm takes over)
                 clusterRadius: 50 // Radius of each cluster when clustering points
             });
 
@@ -429,19 +460,20 @@ function loadRestaurantsFromList() {
                 paint: {
                     'text-color': '#ffffff'
                 }
-            });
-            // Handle clicks on clusters - THE IMPORTANT CHANGE
+            });                // Handle clicks on clusters
             map.on('click', 'clusters', function (e) {
                 const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
                 if (!features || features.length === 0) {
                     console.warn('No cluster features found at click point');
                     return;
-                } const clusterId = features[0].properties.cluster_id;
+                } 
+                const clusterId = features[0].properties.cluster_id;
                 const clusterCenter = features[0].geometry.coordinates;
                 const pointCount = features[0].properties.point_count;
+                const currentZoom = map.getZoom();
 
                 console.log(`Cluster clicked: ID ${clusterId}, contains ${pointCount} points`);
-                console.log(`Current zoom level when cluster clicked: ${map.getZoom()}`);
+                console.log(`Current zoom level when cluster clicked: ${currentZoom}`);
                 console.log(`Tracked zoom level: ${currentZoomLevel}`);
 
                 // Close any existing popup
@@ -450,8 +482,16 @@ function loadRestaurantsFromList() {
                     currentPopup = null;
                 }
 
-                // Track if spiderifier was successfully applied
-                let spiderifierApplied = false;
+                // Track if visualization was successfully applied
+                let visualizationApplied = false;                // Clear any existing scattered markers
+                if (window.scatteredMarkers) {
+                    cleanupScatteredMarkers();
+                }
+                
+                // If spiderifier is active, unspiderfy
+                if (spiderifier) {
+                    spiderifier.unspiderfy();
+                }
 
                 // Get all points in this cluster
                 map.getSource('restaurants').getClusterLeaves(
@@ -465,67 +505,121 @@ function loadRestaurantsFromList() {
                             return;
                         }
 
-                        console.log(`Retrieved ${clusterFeatures.length} points from cluster`);
-
-                        // Check if we have spiderifier and at least 2 features
-                        if (spiderifier && clusterFeatures.length > 1) {
+                        console.log(`Retrieved ${clusterFeatures.length} points from cluster`);                        // Check if we're at zoom level 15 or higher - use scattered markers
+                        if (currentZoom >= 15 && clusterFeatures.length > 1) {
+                            try {
+                                // Use the new scatter marker algorithm
+                                visualizationApplied = scatterMarkers(clusterCenter, clusterFeatures, map);
+                                console.log('Scattered markers applied successfully:', visualizationApplied);
+                            } catch (error) {
+                                console.error('Error applying scattered markers:', error);
+                                fallbackToZoom();
+                            }
+                        }
+                        // Otherwise, use traditional spiderifier if available and we have multiple features
+                        else if (spiderifier && clusterFeatures.length > 1) {
                             // Apply spiderifier to show all points in this cluster
                             try {
                                 // Create LngLat object from cluster center coordinates
-                                const centerLngLat = new mapboxgl.LngLat(clusterCenter[0], clusterCenter[1]);
+                                const centerLngLat = new mapboxgl.LngLat(clusterCenter[0], clusterCenter[1]);                                // Spiderify the cluster features - this method doesn't return anything
+                                spiderifier.spiderfy(features[0].geometry.coordinates, clusterFeatures);
+                                
+                                console.log('Spiderifier executed successfully');
 
-                                // Unspiderify first in case there's an existing spider
-                                spiderifier.unspiderfy();
-
-                                // Spiderify the cluster features
-                                spiderifier.spiderfy(centerLngLat, clusterFeatures);
-                                console.log('Spiderified cluster points successfully');
-                                spiderifierApplied = true;
-
-                                // Create a function to handle unspiderifying
-                                const unspiderifyWhenClickingElsewhere = function (e) {
-                                    // Don't process if spiderifier is not active
-                                    if (!document.querySelector('.spidered-marker-container').style.display === 'block') {
-                                        map.off('click', unspiderifyWhenClickingElsewhere);
-                                        return;
-                                    }
-
-                                    // Check if the click isn't on a spider leg
-                                    const spiderLegs = document.querySelectorAll('.spider-leg-pin');
-                                    let clickedOnSpiderLeg = false;
-
-                                    spiderLegs.forEach(leg => {
-                                        if (e.originalEvent && e.originalEvent.target === leg) {
-                                            clickedOnSpiderLeg = true;
+                                // The spiderifier creates DOM elements directly, so we need to wait a bit
+                                // for them to be created, then add our click handlers
+                                setTimeout(() => {
+                                    const spiderPins = document.querySelectorAll('.spider-leg-pin');
+                                    console.log('Found spider pins:', spiderPins.length);
+                                    
+                                    spiderPins.forEach((pin, index) => {
+                                        const featureId = pin.getAttribute('data-feature-id');
+                                        const feature = clusterFeatures[parseInt(featureId)] || clusterFeatures[index];
+                                        
+                                        if (feature) {
+                                            pin.onclick = function (e) {
+                                                e.stopPropagation();
+                                                console.log('Spider pin clicked:', feature);
+                                                
+                                                // Close any existing popup
+                                                if (currentPopup) {
+                                                    currentPopup.remove();
+                                                    currentPopup = null;
+                                                }
+                                                
+                                                // Get coordinates from the pin's data attributes (visual position)
+                                                const lng = parseFloat(pin.getAttribute('data-lng') || feature.geometry.coordinates[0]);
+                                                const lat = parseFloat(pin.getAttribute('data-lat') || feature.geometry.coordinates[1]);                                                  // Create and display popup for the spider leg
+                                                const popup = new mapboxgl.Popup({
+                                                    closeButton: false,
+                                                    closeOnClick: true,
+                                                    className: 'spider-popup',
+                                                    maxWidth: '300px'
+                                                })
+                                                .setLngLat([lng, lat])
+                                                .setHTML(feature.properties.popupContent)
+                                                .addTo(map);
+                                                currentPopup = popup;
+                                                lastPopupOpenedTime = Date.now();
+                                                
+                                                console.log('Spider popup created with high z-index at:', [lng, lat]);
+                                            };
                                         }
                                     });
+                                }, 100); // Small delay to ensure DOM elements are created
 
-                                    if (!clickedOnSpiderLeg) {
-                                        spiderifier.unspiderfy();
-                                        map.off('click', unspiderifyWhenClickingElsewhere);
-                                    }
-                                };
+                                // Add listeners to unspiderify when clicking elsewhere or moving the map
+                                let unspiderifyOnClickOutside; 
+                                let unspiderifyOnMove;
 
-                                // Remove any existing click handlers and add new one
-                                map.off('click', unspiderifyWhenClickingElsewhere);
-                                map.on('click', unspiderifyWhenClickingElsewhere);
+                                    unspiderifyOnClickOutside = function (event) {
+                                        let clickedOnSpiderLeg = false;
+                                        if (event.originalEvent && event.originalEvent.target) {
+                                            const target = event.originalEvent.target;
+                                            if (target.classList && (target.classList.contains('spider-leg-pin') || target.closest('.spider-leg-pin'))) {
+                                                clickedOnSpiderLeg = true;
+                                            }
+                                        }
+                                        
+                                        let clickedOnOriginalCluster = false;
+                                        const clickedClusterFeatures = map.queryRenderedFeatures(event.point, { layers: ['clusters'] });
+                                        if (clickedClusterFeatures.some(feature => feature.properties.cluster_id === clusterId)) {
+                                            clickedOnOriginalCluster = true;
+                                        }
 
-                                // Also unspiderify on map movement events
-                                const onMapMove = function () {
-                                    spiderifier.unspiderfy();
-                                    map.off('movestart', onMapMove);
-                                    map.off('zoomstart', onMapMove);
-                                    map.off('dragstart', onMapMove);
-                                };
+                                        if (!clickedOnSpiderLeg && !clickedOnOriginalCluster) {
+                                            console.log('Clicked outside spider legs/cluster, unspiderifying and closing popup.');
+                                            if (spiderifier) {
+                                                spiderifier.unspiderfy();
+                                            }
+                                            if (currentPopup) {
+                                                currentPopup.remove();
+                                                currentPopup = null;
+                                            }
+                                            map.off('click', unspiderifyOnClickOutside); 
+                                            if (unspiderifyOnMove) { 
+                                               map.off('move', unspiderifyOnMove); 
+                                            }
+                                        } else {
+                                            console.log('Clicked on spider leg or cluster, not unspiderifying via this handler.');
+                                        }
+                                    };
+                                    map.on('click', unspiderifyOnClickOutside);
 
-                                map.off('movestart', onMapMove);
-                                map.off('zoomstart', onMapMove);
-                                map.off('dragstart', onMapMove);
-
-                                map.on('movestart', onMapMove);
-                                map.on('zoomstart', onMapMove);
-                                map.on('dragstart', onMapMove);
-
+                                    unspiderifyOnMove = function () {
+                                        console.log('Map moved, unspiderifying.');
+                                        if (spiderifier) {
+                                            spiderifier.unspiderfy();
+                                        }
+                                        if (currentPopup) { 
+                                            currentPopup.remove();
+                                            currentPopup = null;
+                                        }
+                                        map.off('move', unspiderifyOnMove); 
+                                        if (unspiderifyOnClickOutside) { 
+                                            map.off('click', unspiderifyOnClickOutside); 
+                                        }
+                                    };                                    map.once('move', unspiderifyOnMove);
                             } catch (error) {
                                 console.error('Error applying spiderifier to cluster:', error);
                                 fallbackToZoom();
@@ -538,7 +632,7 @@ function loadRestaurantsFromList() {
 
                 // Helper function for fallback zoom behavior
                 function fallbackToZoom() {
-                    if (spiderifierApplied) return; // Don't zoom if spiderifier was successfully applied
+                    if (visualizationApplied) return; // Don't zoom if visualization was successfully applied
 
                     console.log('Falling back to cluster zoom behavior');
                     map.getSource('restaurants').getClusterExpansionZoom(
@@ -604,26 +698,25 @@ function loadRestaurantsFromList() {
                 const features = map.queryRenderedFeatures(e.point, { layers: ['unclustered-point'] });
                 if (!features.length) return;
 
-                const feature = features[0];
-
-                // Close any existing popup
+                const feature = features[0];                // Close any existing popup
                 if (currentPopup) {
                     currentPopup.remove();
                     currentPopup = null;
-                }
-
-                // Create and display popup
+                }                // Create and display popup
                 const popup = new mapboxgl.Popup({
-                    closeButton: true,
-                    closeOnClick: true
+                    closeButton: false,
+                    closeOnClick: true,
+                    className: 'restaurant-popup',
+                    maxWidth: '300px'
                 }).setLngLat(feature.geometry.coordinates)
                     .setHTML(feature.properties.popupContent)
                     .addTo(map);
 
                 currentPopup = popup;
-            });
-
-            // Change cursor on point hover
+                
+                // Record the time when popup was opened to prevent immediate closure
+                lastPopupOpenedTime = Date.now();
+            });            // Change cursor on point hover
             map.on('mouseenter', 'unclustered-point', function () {
                 map.getCanvas().style.cursor = 'pointer';
             });
@@ -631,6 +724,14 @@ function loadRestaurantsFromList() {
             map.on('mouseleave', 'unclustered-point', function () {
                 map.getCanvas().style.cursor = '';
             });
+
+            // Add map event listener for scatter functionality
+            map.on('idle', function() {
+                const currentZoom = map.getZoom();
+                checkZoomForScatterView(currentZoom);
+            });
+
+            console.log('Map event listeners for scatter functionality added');
         }
     }
 }
@@ -649,9 +750,6 @@ function createPopupContent(name, rating, reviewCount, address, id) {
                 <a href="/Restaurant/Details/${id}" class="btn btn-primary btn-sm">
                     Xem chi tiết
                 </a>
-                <button class="btn btn-outline-secondary btn-sm" onclick="centerMapOnRestaurant(${id})">
-                    Phóng to
-                </button>
             </div>
         </div>
     `;
@@ -662,11 +760,15 @@ function clearMarkers() {
         if (popup) popup.remove();
         if (marker) marker.remove();
     });
-    markers = [];
-
-    if (currentPopup) {
+    markers = [];    if (currentPopup) {
         currentPopup.remove();
         currentPopup = null;
+    }
+    
+    // Clear any scattered markers
+    if (window.scatteredMarkers) {
+        console.log('Clearing scattered markers from clearMarkers function');
+        cleanupScatteredMarkers();
     }
 
     // Clean up spiderifier
@@ -680,24 +782,59 @@ function cleanupSpiderifier() {
         try {
             console.log('Cleaning up spiderifier...');
             spiderifier.unspiderfy();
-
-            // Remove event listeners from map
-            if (map) {
-                map.off('click', unspiderifyWhenClickingElsewhere);
-                map.off('movestart', onMapMove);
-                map.off('zoomstart', onMapMove);
-                map.off('dragstart', onMapMove);
-            }
+            
+            // Note: We're not trying to remove specific event listeners here
+            // as they're managed within each cluster click handler
         } catch (error) {
             console.warn('Error cleaning up spiderifier:', error);
+        }
+    }    // Also clean up any scattered markers
+    if (window.scatteredMarkers) {
+        console.log('Cleaning up scattered markers...');
+        cleanupScatteredMarkers();
+    }
+}
+// Global handlers for spiderifier cleanup
+function unspiderifyWhenClickingElsewhere(e) { 
+    // Check if spiderifier is active by looking at its container
+    const spideredContainer = document.querySelector('.spidered-marker-container');
+    if (spideredContainer && spideredContainer.style.display === 'block') {
+        // Check if the click isn't on a spider leg
+        const spiderLegs = document.querySelectorAll('.spider-leg-pin');
+        let clickedOnSpiderLeg = false;
+
+        spiderLegs.forEach(leg => {
+            if (e.originalEvent && e.originalEvent.target === leg) {
+                clickedOnSpiderLeg = true;
+            }
+        });        if (!clickedOnSpiderLeg) {
+            if (spiderifier) {
+                spiderifier.unspiderfy();
+                
+                // Also close any open popup when clicking elsewhere
+                if (currentPopup) {
+                    currentPopup.remove();
+                    currentPopup = null;
+                }
+                
+                // Remove this event handler since we've handled the click
+                map.off('click', unspiderifyWhenClickingElsewhere);
+            }
         }
     }
 }
 
-// These function definitions are used by the cleanupSpiderifier function
-// They're empty here because they'll be set up when actually needed
-function unspiderifyWhenClickingElsewhere() { }
-function onMapMove() { }
+function onMapMove() { 
+    if (spiderifier) {
+        spiderifier.unspiderfy();
+    }
+    
+    // Also close any open popup on map movement
+    if (currentPopup) {
+        currentPopup.remove();
+        currentPopup = null;
+    }
+}
 
 // Reload map functionality
 document.addEventListener('DOMContentLoaded', function () {
@@ -731,6 +868,9 @@ function centerMapOnRestaurant(restaurantId) {
     if (spiderifier) {
         spiderifier.unspiderfy();
     }
+    
+    // Clean up any scattered markers
+    cleanupScatteredMarkers();
 
     const lat = parseFloat(card.dataset.lat);
     const lng = parseFloat(card.dataset.lng);
@@ -752,47 +892,44 @@ function centerMapOnRestaurant(restaurantId) {
                 currentPopup.remove();
                 currentPopup = null;
             }
-
-            // Find feature for this restaurant
-            if (map.getSource('restaurants')) {
-                const features = map.querySourceFeatures('restaurants', {
-                    filter: ['==', ['get', 'id'], restaurantId.toString()]
-                });
-
-                if (features.length > 0) {
-                    const feature = features[0];
-
-                    const popup = new mapboxgl.Popup({
-                        closeButton: true,
-                        closeOnClick: true
-                    }).setLngLat([lng, lat])
-                        .setHTML(createPopupContent(
-                            feature.properties.name,
-                            feature.properties.rating,
-                            feature.properties.reviewCount,
-                            feature.properties.address,
-                            restaurantId
-                        ))
-                        .addTo(map);
-
-                    currentPopup = popup;
-                } else {
-                    // Fallback if feature not found in source
-                    const name = card.dataset.name;
-                    const rating = card.dataset.rating;
-                    const reviewCount = card.dataset.reviewCount;
-                    const address = card.dataset.address;
-
-                    const popup = new mapboxgl.Popup({
-                        closeButton: true,
-                        closeOnClick: true
-                    }).setLngLat([lng, lat])
-                        .setHTML(createPopupContent(name, rating, reviewCount, address, restaurantId))
-                        .addTo(map);
-
-                    currentPopup = popup;
-                }
-            }
+              // Use data directly from the card instead of searching for features
+            // as querySourceFeatures doesn't reliably find features in clusters
+            const name = card.dataset.name;
+            const rating = card.dataset.rating;
+            const reviewCount = card.dataset.reviewCount;
+            const address = card.dataset.address;
+            
+            console.log('Restaurant data from card dataset:', { 
+                name: name, 
+                rating: rating, 
+                reviewCount: reviewCount, 
+                address: address,
+                allDataset: card.dataset 
+            });
+            
+            // Always create a popup, with restaurant name from card or fallback
+            const displayName = name || (' ' + restaurantId);
+            const displayRating = rating || 'N/A';
+            const displayReviewCount = reviewCount || '0';
+            const displayAddress = address || '';              const popup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: true,
+                className: 'restaurant-popup',
+                maxWidth: '300px'
+            }).setLngLat([lng, lat])
+                .setHTML(createPopupContent(
+                    displayName,
+                    displayRating,
+                    displayReviewCount,
+                    displayAddress,
+                    restaurantId
+                ))
+                .addTo(map);
+            
+            currentPopup = popup;
+            
+            // Record the time when popup was opened to prevent immediate closure
+            lastPopupOpenedTime = Date.now();
         }, 1200); // Wait a bit after the map animation
 
         return true;
@@ -846,3 +983,660 @@ document.addEventListener('DOMContentLoaded', function () {
 window.loadRestaurantsFromList = loadRestaurantsFromList;
 window.centerMapOnRestaurant = centerMapOnRestaurant;
 window.initializeRestaurantCardHandlers = initializeRestaurantCardHandlers;
+
+// Track when the last popup was opened to prevent immediate closure
+let lastPopupOpenedTime = 0;
+
+// Check if we need to scatter markers based on current zoom level
+function checkZoomForScatterView(zoomLevel) {
+    console.log('=== CHECKING ZOOM FOR SCATTER VIEW ===');
+    console.log('Current zoom level:', zoomLevel);
+    console.log('Scatter threshold: 15');
+    console.log('Current scatter state:', currentScatterState);
+    console.log('Scatter check in progress:', scatterCheckInProgress);
+    
+    // Prevent feedback loops
+    if (scatterCheckInProgress) {
+        console.log('Scatter check already in progress, skipping');
+        return;
+    }
+    
+    scatterCheckInProgress = true;
+    
+    try {
+        // Determine desired state based on zoom level
+        const desiredState = zoomLevel >= 15 ? 'scattered' : 'original';
+        console.log('Desired state:', desiredState);
+        
+        // If we're already in the desired state, don't do anything
+        if (currentScatterState === desiredState) {
+            console.log('Already in desired state, no action needed');
+            return;
+        }
+        
+        if (zoomLevel >= 15) {
+            console.log('Zoom level >= 15, checking for overlapping markers...');
+            
+            // Query all visible restaurant features (both clustered and unclustered)
+            const unclusteredFeatures = map.queryRenderedFeatures({ layers: ['unclustered-point'] });
+            const clusteredFeatures = map.queryRenderedFeatures({ layers: ['clusters'] });
+            const allFeatures = [...unclusteredFeatures];
+            
+            console.log('Found unclustered features:', unclusteredFeatures.length);
+            console.log('Found clustered features:', clusteredFeatures.length);
+            console.log('Total features to check:', allFeatures.length);
+            
+            // Only proceed if we have unclustered features to work with (clustered features don't need scattering)
+            if (allFeatures.length === 0) {
+                console.log('No unclustered features found, keeping original markers visible');
+                // Ensure original markers are visible if scattered markers were previously shown
+                if (currentScatterState === 'scattered') {
+                    cleanupScatteredMarkers();
+                    showOriginalMarkers();
+                    currentScatterState = 'original';
+                }
+                return;
+            }
+            
+            // Use unclustered features for scattering logic
+            const features = unclusteredFeatures;
+            
+            // Group nearby markers
+            const groups = groupNearbyMarkers(features);
+            console.log('Grouped markers into', groups.length, 'groups');
+            
+            // Check if any groups need scattering
+            let needsScattering = false;
+            groups.forEach((group) => {
+                if (group.length > 1) {
+                    needsScattering = true;
+                }
+            });
+            
+            if (needsScattering) {
+                console.log('Found groups that need scattering, transitioning to scattered state');
+                // Only hide original markers if we actually need to scatter
+                hideOriginalMarkers();
+                currentScatterState = 'scattered';
+                
+                // Process each group that has multiple markers
+                groups.forEach((group, groupIndex) => {
+                    if (group.length > 1) {
+                        console.log(`Group ${groupIndex + 1} has ${group.length} markers, scattering...`);
+                        scatterMarkers(group, groupIndex);
+                    } else {
+                        console.log(`Group ${groupIndex + 1} has only 1 marker, skipping scatter`);
+                    }
+                });
+            } else {
+                console.log('No groups need scattering, keeping original markers visible');
+                // Clean up any existing scattered markers and show originals
+                if (currentScatterState === 'scattered') {
+                    cleanupScatteredMarkers();
+                    showOriginalMarkers();
+                    currentScatterState = 'original';
+                }
+            }
+        } else {
+            console.log('Zoom level < 15, transitioning to original state');
+            if (currentScatterState === 'scattered') {
+                cleanupScatteredMarkers();
+                showOriginalMarkers();
+                currentScatterState = 'original';
+            }
+        }
+    } catch (error) {
+        console.error('Error in checkZoomForScatterView:', error);
+        // In case of error, ensure original markers are shown and scattered markers are cleaned up
+        cleanupScatteredMarkers();
+        showOriginalMarkers();
+        currentScatterState = 'original';
+    } finally {
+        // Always reset the flag to prevent infinite loops
+        scatterCheckInProgress = false;
+        console.log('Scatter check completed, flag reset, current state:', currentScatterState);
+    }
+}
+
+// Hide original marker layers when scattering
+function hideOriginalMarkers() {
+    console.log('=== HIDING ORIGINAL MARKERS ===');
+    
+    try {
+        // Hide unclustered points
+        if (map.getLayer('unclustered-point')) {
+            map.setLayoutProperty('unclustered-point', 'visibility', 'none');
+            console.log('Hidden unclustered-point layer');
+        }
+        
+        // Hide unclustered point labels
+        if (map.getLayer('unclustered-point-label')) {
+            map.setLayoutProperty('unclustered-point-label', 'visibility', 'none');
+            console.log('Hidden unclustered-point-label layer');
+        }
+        
+        // Hide clusters
+        if (map.getLayer('clusters')) {
+            map.setLayoutProperty('clusters', 'visibility', 'none');
+            console.log('Hidden clusters layer');
+        }
+        
+        // Hide cluster count labels
+        if (map.getLayer('cluster-count')) {
+            map.setLayoutProperty('cluster-count', 'visibility', 'none');
+            console.log('Hidden cluster-count layer');
+        }
+    } catch (error) {
+        console.error('Error hiding original markers:', error);
+    }
+}
+
+// Show original marker layers when not scattering
+function showOriginalMarkers() {
+    console.log('=== SHOWING ORIGINAL MARKERS ===');
+    
+    try {
+        // Show unclustered points
+        if (map.getLayer('unclustered-point')) {
+            map.setLayoutProperty('unclustered-point', 'visibility', 'visible');
+            console.log('Shown unclustered-point layer');
+        }
+        
+        // Show unclustered point labels
+        if (map.getLayer('unclustered-point-label')) {
+            map.setLayoutProperty('unclustered-point-label', 'visibility', 'visible');
+            console.log('Shown unclustered-point-label layer');
+        }
+        
+        // Show clusters
+        if (map.getLayer('clusters')) {
+            map.setLayoutProperty('clusters', 'visibility', 'visible');
+            console.log('Shown clusters layer');
+        }
+        
+        // Show cluster count labels
+        if (map.getLayer('cluster-count')) {
+            map.setLayoutProperty('cluster-count', 'visibility', 'visible');
+            console.log('Shown cluster-count layer');
+        }
+        
+        // Reset the scattered markers flag
+        scatteredMarkersActive = false;
+        
+    } catch (error) {
+        console.error('Error showing original markers:', error);
+    }
+}
+
+// Group nearby markers that should be scattered
+function groupNearbyMarkers(features, radiusPixels = 50) {
+    console.log('=== GROUPING NEARBY MARKERS ===');
+    console.log('Input features:', features.length);
+    console.log('Radius pixels:', radiusPixels);
+    
+    const groups = [];
+    const processed = new Set();
+    
+    features.forEach((feature, index) => {
+        if (processed.has(index)) {
+            console.log(`Feature ${index} already processed, skipping`);
+            return;
+        }
+        
+        const featurePoint = map.project(feature.geometry.coordinates);
+        console.log(`Feature ${index} screen position:`, featurePoint);
+        
+        const group = [feature];
+        processed.add(index);
+        
+        // Find nearby features
+        features.forEach((otherFeature, otherIndex) => {
+            if (otherIndex !== index && !processed.has(otherIndex)) {
+                const otherPoint = map.project(otherFeature.geometry.coordinates);
+                const distance = Math.sqrt(
+                    Math.pow(featurePoint.x - otherPoint.x, 2) + 
+                    Math.pow(featurePoint.y - otherPoint.y, 2)
+                );
+                
+                console.log(`Distance between feature ${index} and ${otherIndex}:`, distance);
+                
+                if (distance < radiusPixels) {
+                    console.log(`Feature ${otherIndex} is within radius, adding to group`);
+                    group.push(otherFeature);
+                    processed.add(otherIndex);
+                }
+            }
+        });
+        
+        console.log(`Group created with ${group.length} features`);
+        groups.push(group);
+    });
+    
+    console.log('Final groups:', groups.length);
+    return groups;
+}
+
+// Calculate center point for a group of markers
+function calculateGroupCenter(group) {
+    console.log('=== CALCULATING GROUP CENTER ===');
+    console.log('Group size:', group.length);
+    
+    if (group.length === 0) {
+        console.error('Empty group provided to calculateGroupCenter');
+        return null;
+    }
+    
+    let totalLng = 0;
+    let totalLat = 0;
+    let validCount = 0;
+    
+    group.forEach((feature, index) => {
+        let coords = null;
+        
+        // Try multiple ways to access coordinates
+        if (feature && feature.geometry && feature.geometry.coordinates) {
+            coords = feature.geometry.coordinates;
+        } else if (feature && feature.coordinates) {
+            coords = feature.coordinates;
+        } else if (feature && typeof feature.getLngLat === 'function') {
+            const lngLat = feature.getLngLat();
+            coords = [lngLat.lng, lngLat.lat];
+        } else {
+            console.error(`Feature ${index} structure:`, feature);
+        }
+        
+        if (coords && Array.isArray(coords) && coords.length >= 2) {
+            console.log(`Feature ${index} coords:`, coords);
+            totalLng += coords[0];
+            totalLat += coords[1];
+            validCount++;
+        } else {
+            console.error(`Feature ${index} has invalid coordinates:`, coords);
+        }
+    });
+    
+    if (validCount === 0) {
+        console.error('No valid coordinates found in group');
+        return null;
+    }
+    
+    const centerLng = totalLng / validCount;
+    const centerLat = totalLat / validCount;
+    
+    console.log('Calculated center:', { lng: centerLng, lat: centerLat });
+    return [centerLng, centerLat];
+}
+
+// Scatter markers around their center point, using techniques from mapboxgl-spiderifier
+function scatterMarkers(group, groupIndex) {
+    console.log('=== SCATTERING MARKERS ===');
+    console.log(`Group ${groupIndex + 1}:`, group.length, 'markers');
+    
+    // Set the flag that we're showing scattered markers
+    scatteredMarkersActive = true;
+    
+    // Calculate group center
+    const center = calculateGroupCenter(group);
+    if (!center) {
+        console.error('Could not calculate center for group', groupIndex);
+        return;
+    }
+    
+    console.log('Group center coordinates:', center);
+    
+    // Create a LngLat object for the center
+    const centerLngLat = new mapboxgl.LngLat(center[0], center[1]);
+    
+    // Project center to pixel coordinates - this is critical for accurate positioning
+    const centerPoint = map.project(centerLngLat);
+    console.log('Center point in pixels:', centerPoint);
+    
+    // Initialize scattered markers array if it doesn't exist
+    if (!window.scatteredMarkers) {
+        window.scatteredMarkers = [];
+        console.log('Initialized scatteredMarkers array');
+    }
+    
+    // Create DOM container for scattered markers if it doesn't exist
+    let scatteredContainer = document.getElementById('scattered-markers-container');
+    if (!scatteredContainer) {
+        scatteredContainer = document.createElement('DIV');
+        scatteredContainer.id = 'scattered-markers-container';
+        scatteredContainer.style.position = 'absolute';
+        scatteredContainer.style.pointerEvents = 'none';
+        scatteredContainer.style.zIndex = '1000';
+        scatteredContainer.style.width = '100%';
+        scatteredContainer.style.height = '100%';
+        scatteredContainer.style.top = '0';
+        scatteredContainer.style.left = '0';
+        map.getContainer().appendChild(scatteredContainer);
+    }
+    
+    // Calculate positions using a circle arrangement or spiral for many points
+    const positions = calculateScatterPositions(group.length);
+    console.log('Calculated scatter positions:', positions);
+    
+    group.forEach((feature, index) => {
+        console.log(`\n--- Processing marker ${index + 1}/${group.length} ---`);
+        console.log('Original feature coordinates:', feature.geometry.coordinates);
+        
+        const pos = positions[index];
+        console.log('Position for this marker:', pos);
+        
+        // Create marker element with styling similar to spiderifier legs
+        const markerEl = document.createElement('div');
+        markerEl.className = 'scattered-marker';
+        markerEl.setAttribute('data-feature-id', feature.properties.id || index);
+        
+        // Style the marker with explicit CSS similar to spider legs
+        markerEl.style.position = 'absolute';
+        markerEl.style.width = '36px';
+        markerEl.style.height = '36px';
+        markerEl.style.backgroundColor = '#dc3545';
+        markerEl.style.border = '3px solid white';
+        markerEl.style.borderRadius = '50%';
+        markerEl.style.display = 'flex';
+        markerEl.style.alignItems = 'center';
+        markerEl.style.justifyContent = 'center';
+        markerEl.style.color = 'white';
+        markerEl.style.fontWeight = 'bold';
+        markerEl.style.fontSize = '14px';
+        markerEl.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+        markerEl.style.cursor = 'pointer';
+        markerEl.style.zIndex = '1000';
+        markerEl.style.pointerEvents = 'auto'; // Allow clicks
+        
+        // Add marker number/identifier
+        if (feature.properties.index) {
+            markerEl.textContent = feature.properties.index;
+        } else if (feature.properties.number) {
+            markerEl.textContent = feature.properties.number;
+        } else {
+            markerEl.textContent = (index + 1).toString();
+        }
+        
+        // Calculate the visual position in pixels - using same method as spiderifier
+        const markerPixelX = centerPoint.x + pos.x;
+        const markerPixelY = centerPoint.y + pos.y;
+        
+        // Center the marker by accounting for its size
+        const markerSize = 36; // Size in pixels (matching the CSS)
+        const halfSize = markerSize / 2;
+        
+        // Position the marker using absolute positioning
+        markerEl.style.left = `${markerPixelX - halfSize}px`;
+        markerEl.style.top = `${markerPixelY - halfSize}px`;
+        
+        // Calculate the actual geographic coordinates by unprojecting the pixel position
+        const visualPoint = {
+            x: markerPixelX,
+            y: markerPixelY
+        };
+        
+        // Convert pixel position back to geographic coordinates
+        let visualLngLat;
+        try {
+            visualLngLat = map.unproject(visualPoint);
+            console.log('Visual LngLat for marker:', visualLngLat);
+            
+            // Store coordinates as data attributes for later use
+            markerEl.setAttribute('data-lng', visualLngLat.lng);
+            markerEl.setAttribute('data-lat', visualLngLat.lat);
+            markerEl.setAttribute('data-original-lng', feature.geometry.coordinates[0]);
+            markerEl.setAttribute('data-original-lat', feature.geometry.coordinates[1]);
+        } catch (error) {
+            console.error('Error unprojecting coordinates:', error);
+            visualLngLat = {
+                lng: feature.geometry.coordinates[0],
+                lat: feature.geometry.coordinates[1]
+            };
+        }
+        
+        // Add click handler for popup
+        markerEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('Scattered marker clicked:', feature.properties);
+            
+            // Close existing popup
+            if (currentPopup) {
+                currentPopup.remove();
+            }
+            
+            // Get the coordinates from data attributes
+            const lng = parseFloat(markerEl.getAttribute('data-lng') || visualLngLat.lng);
+            const lat = parseFloat(markerEl.getAttribute('data-lat') || visualLngLat.lat);            // Create popup at the marker's position
+            const popup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: true,
+                className: 'scattered-popup', // This class helps us identify popups from scattered markers
+                maxWidth: '300px',
+                offset: [0, -18], // Offset above the marker
+                anchor: 'bottom'
+            })
+            .setHTML(feature.properties.popupContent)
+            .setLngLat([lng, lat]) // Use visual coordinates for popup
+            .addTo(map);
+              currentPopup = popup;
+            lastPopupOpenedTime = Date.now();
+            
+            console.log('Scattered marker popup created with high z-index at position:', [lng, lat]);
+        });
+        
+        // Add hover effect
+        markerEl.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.1)';
+        });
+        
+        markerEl.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+        
+        // Add to the container
+        scatteredContainer.appendChild(markerEl);
+        
+        // Store reference with additional info
+        const markerInfo = {
+            element: markerEl,
+            originalCoords: feature.geometry.coordinates,
+            visualCoords: [visualLngLat.lng, visualLngLat.lat],
+            pixelPosition: visualPoint,
+            feature: feature,
+            remove: function() {
+                if (markerEl.parentNode) {
+                    markerEl.parentNode.removeChild(markerEl);
+                }
+            }
+        };
+        
+        window.scatteredMarkers.push(markerInfo);
+        console.log('Added scattered marker:', markerInfo.visualCoords);
+    });
+    
+    // Make the container visible
+    scatteredContainer.style.display = 'block';
+    
+    console.log(`Finished scattering group ${groupIndex + 1}`);
+    console.log('Total scattered markers:', window.scatteredMarkers.length);
+    
+    // Update positions when map moves or zooms
+    map.on('move', updateScatteredMarkers);
+    map.on('zoom', updateScatteredMarkers);
+    
+    return true;
+}
+
+// Update positions of scattered markers when map moves
+function updateScatteredMarkers() {
+    if (!window.scatteredMarkers || window.scatteredMarkers.length === 0) return;
+    
+    const container = document.getElementById('scattered-markers-container');
+    if (!container) return;
+    
+    window.scatteredMarkers.forEach(markerInfo => {
+        if (!markerInfo.originalCoords) return;
+        
+        // Get the center coordinates for this marker's group
+        // For now we'll use the original coordinates as a reference point
+        const centerLngLat = new mapboxgl.LngLat(
+            markerInfo.originalCoords[0], 
+            markerInfo.originalCoords[1]
+        );
+        
+        // Project center to new pixel position
+        const centerPoint = map.project(centerLngLat);
+        
+        // Get the offset from the original calculation
+        const offsetX = markerInfo.pixelPosition.x - centerPoint.x;
+        const offsetY = markerInfo.pixelPosition.y - centerPoint.y;
+        
+        // Calculate new pixel position
+        const newPixelX = centerPoint.x + offsetX;
+        const newPixelY = centerPoint.y + offsetY;
+        
+        // Update the element position
+        const markerEl = markerInfo.element;
+        if (markerEl) {
+            const markerSize = 36; // Match the CSS size
+            const halfSize = markerSize / 2;
+            
+            markerEl.style.left = `${newPixelX - halfSize}px`;
+            markerEl.style.top = `${newPixelY - halfSize}px`;
+        }
+    });
+}
+
+// Calculate positions for scattered markers based on count
+function calculateScatterPositions(count) {
+    const positions = [];
+    
+    if (count <= 0) return positions;
+    
+    // If only one marker, position it above the center
+    if (count === 1) {
+        positions.push({
+            angle: 0,
+            leg: 100 // 100px above
+        });
+        return positions;
+    }
+    
+    // Use a spiral for many points (more than 8)
+    if (count > 8) {
+        let legLength = 60; // Starting length
+        const angleStep = Math.PI * 2 / 30; // Smaller step = more tightly packed spiral
+        
+        // Start angle slightly offset to avoid direct vertical alignment
+        let angle = Math.PI / 6;
+        
+        for (let i = 0; i < count; i++) {
+            positions.push({
+                angle: angle,
+                leg: legLength,
+                x: legLength * Math.cos(angle),
+                y: legLength * Math.sin(angle)
+            });
+            angle += angleStep;
+            legLength += 5; // Increment length for spiral effect
+        }
+        
+        return positions;
+    }
+    
+    // For 2-8 markers, use a circle arrangement
+    const radius = 100; // Fixed radius in pixels
+    const angleStep = (Math.PI * 2) / count;
+    
+    // Start angle slightly offset to avoid direct vertical alignment
+    let angle = Math.PI / 6;
+    
+    for (let i = 0; i < count; i++) {
+        positions.push({
+            angle: angle,
+            leg: radius,
+            x: radius * Math.cos(angle),
+            y: radius * Math.sin(angle)
+        });
+        angle += angleStep;
+    }
+    
+    return positions;
+}
+
+// Clean up scattered markers
+function cleanupScatteredMarkers() {
+    console.log('=== CLEANING UP SCATTERED MARKERS ===');
+    
+    // Store whether markers were active before resetting flag
+    const wereMarkersActive = scatteredMarkersActive;
+    
+    // Reset the flag - we always do this regardless
+    scatteredMarkersActive = false;
+    
+    // Remove event listeners for map movement
+    map.off('move', updateScatteredMarkers);
+    map.off('zoom', updateScatteredMarkers);
+    
+    // Clean up container
+    const container = document.getElementById('scattered-markers-container');
+    if (container) {
+        container.style.display = 'none';
+        
+        // Remove all marker elements
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+    }
+      if (window.scatteredMarkers && window.scatteredMarkers.length > 0) {
+        console.log('Removing', window.scatteredMarkers.length, 'scattered markers');
+        
+        window.scatteredMarkers.forEach((markerInfo, index) => {
+            try {
+                // Check what kind of marker object we have
+                if (markerInfo.remove && typeof markerInfo.remove === 'function') {
+                    // New style marker with remove method
+                    markerInfo.remove();
+                } else if (markerInfo.element) {
+                    // DOM element style marker
+                    if (markerInfo.element.parentNode) {
+                        markerInfo.element.parentNode.removeChild(markerInfo.element);
+                    }
+                } else if (markerInfo.marker && markerInfo.marker.remove) {
+                    // Old style mapbox marker
+                    markerInfo.marker.remove();
+                } else {
+                    // Fallback for old style
+                    const marker = markerInfo.marker || markerInfo;
+                    if (marker && marker.remove) {
+                        marker.remove();
+                    }                }
+                console.log(`Removed scattered marker ${index + 1}`);
+            } catch (error) {
+                console.error(`Error removing scattered marker ${index + 1}:`, error);
+            }
+        });
+        
+        window.scatteredMarkers = [];
+        console.log('Scattered markers array cleared');
+    }
+    
+    console.log('Scattered markers cleanup complete');
+}
+
+// Manual testing function for debugging
+function testScatterMarkers() {
+    console.log('=== MANUAL SCATTER TEST ===');
+    
+    if (!map) {
+        console.error('Map not initialized');
+        return;
+    }
+    
+    const currentZoom = map.getZoom();
+    console.log('Current zoom for test:', currentZoom);
+    
+    // Force check scatter view
+    checkZoomForScatterView(currentZoom);
+}
+
+// Make test function globally available
+window.testScatterMarkers = testScatterMarkers;
