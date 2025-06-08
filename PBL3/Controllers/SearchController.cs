@@ -15,13 +15,15 @@ namespace PBL3.Controllers
 {    public class SearchController : Controller
     {   
         private readonly IRestaurantService _restaurantService;
+        private readonly IGeoLocationService _geoLocationService;
         private readonly IConfiguration _config;
         private readonly ILogger<SearchController> _logger;
         
-        public SearchController(IRestaurantService restaurantService, IConfiguration config, ILogger<SearchController> logger)
+        public SearchController(IRestaurantService restaurantService, IGeoLocationService geoLocationService, IConfiguration config, ILogger<SearchController> logger)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _restaurantService = restaurantService ?? throw new ArgumentNullException(nameof(restaurantService));
+            _geoLocationService = geoLocationService ?? throw new ArgumentNullException(nameof(geoLocationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }public async Task<IActionResult> Index(string searchTerm = "", string Address = "", int page = 1, int pageSize = 10, IEnumerable<int>? tagIds = null, IEnumerable<int>? cuisineTypeIds = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string maxDistance = "")
         {            //Mapbox token
@@ -29,7 +31,9 @@ namespace PBL3.Controllers
             ViewBag.CuisineTypes = await _restaurantService.GetAllCuisineTypesAsync();
 
             // Chuẩn hóa thông tin vị trí và bán kính tìm kiếm
-            var normalizedLocation = _restaurantService.NormalizeLocationParameters(Address, null, null, maxDistance);            var svm = new SearchViewModel
+            var normalizedLocation = await _restaurantService.NormalizeLocationParameters(Address, null, null, maxDistance);
+            
+            var svm = new SearchViewModel
             {
                 SearchTerm = searchTerm,
                 Address = normalizedLocation.address,

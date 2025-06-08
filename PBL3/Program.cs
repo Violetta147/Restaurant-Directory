@@ -93,11 +93,15 @@ builder.Services.AddTransient<PBL3.Ultilities.EmailHelper>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+// Add HttpClient for API calls
+builder.Services.AddHttpClient();
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddTransient<PBL3.Ultilities.IEmailSender, PBL3.Ultilities.EmailHelper>();
 builder.Services.AddScoped<IPhotoService, CloudinaryPhotoService>();
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+builder.Services.AddScoped<IGeoLocationService, GeoLocationService>();
 var app = builder.Build();
 
 // --- GỌI SEEDER Ở ĐÂY ---

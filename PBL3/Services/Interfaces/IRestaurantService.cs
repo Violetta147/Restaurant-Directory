@@ -34,9 +34,9 @@ namespace PBL3.Services.Interfaces
         /// <param name="address">Địa chỉ đầu vào, có thể null hoặc rỗng</param>
         /// <param name="latitude">Tọa độ vĩ độ đầu vào, có thể null</param>
         /// <param name="longitude">Tọa độ kinh độ đầu vào, có thể null</param>
-        /// <param name="radiusInKm">Bán kính tìm kiếm đầu vào, có thể null</param>
+        /// <param name="maxDistance">Bán kính tìm kiếm đầu vào, có thể null</param>
         /// <returns>Tuple chứa địa chỉ, tọa độ vĩ độ, kinh độ và bán kính đã chuẩn hóa</returns>
-        (string address, double latitude, double longitude, double radiusInKm) NormalizeLocationParameters(
+        Task<(string address, double latitude, double longitude, double radiusInKm)> NormalizeLocationParameters(
             string? address, double? latitude = null, double? longitude = null, string? maxDistance = null);
 
         // --- Chức năng cho Admin hoặc Chủ Nhà hàng (RestaurantOwner) ---

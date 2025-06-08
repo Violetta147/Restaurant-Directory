@@ -11,12 +11,14 @@ namespace PBL3.Services.Implementations
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<RestaurantService> _logger;
+        private readonly IGeoLocationService? _geoLocationService;
 
-        public RestaurantService(ApplicationDbContext context, ILogger<RestaurantService> logger)
+        public RestaurantService(ApplicationDbContext context, ILogger<RestaurantService> logger, IGeoLocationService? geoLocationService = null)
         {
             _context = context;
             _logger = logger;
-        } 
+            _geoLocationService = geoLocationService;
+        }
         
         //Search by both searchTerm and addressQuery
         public async Task<IPagedList<Restaurant>> SearchRestaurantsAdvancedAsync(
@@ -206,12 +208,10 @@ namespace PBL3.Services.Implementations
             return _context.CuisineTypes
                 .OrderBy(c => c.Name)
                 .ToListAsync();
-        }
-        
-        /// <summary>
+        }/// <summary>
         /// Chuẩn hóa địa chỉ và tọa độ với giá trị mặc định cho Đà Nẵng
         /// </summary>
-        public (string address, double latitude, double longitude, double radiusInKm) NormalizeLocationParameters(
+        public async Task<(string address, double latitude, double longitude, double radiusInKm)> NormalizeLocationParameters(
             string? address, double? latitude = null, double? longitude = null, string? maxDistance = null)
         {
             // Mặc định địa chỉ là Đà Nẵng nếu không có địa chỉ
@@ -220,17 +220,41 @@ namespace PBL3.Services.Implementations
                 address = "Đà Nẵng";
             }
             
-            double normalizedLatitude = latitude ?? 16.047079; // Tọa độ trung tâm Đà Nẵng
-            double normalizedLongitude = longitude ?? 108.206230;
-            
-            double radiusInKm = 5.0;
-            
-            if (!string.IsNullOrEmpty(maxDistance) && double.TryParse(maxDistance, out double parsedDistance))
+            double defaultRadius = 5.0;
+            if (!string.IsNullOrEmpty(maxDistance) && double.TryParse(maxDistance, out double radius))
             {
-                radiusInKm = parsedDistance;
+                defaultRadius = radius;
             }
             
-            return (address, normalizedLatitude, normalizedLongitude, radiusInKm);
+            // If we have explicit coordinates, use those
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                return (address, latitude.Value, longitude.Value, defaultRadius);
+            }
+            
+            // If we don't have coordinates but have an address, use the GeoLocationService
+            if (_geoLocationService != null)
+            {
+                try
+                {
+                    var coords = await _geoLocationService.GetCoordinatesFromAddressAsync(address!);
+                    
+                    _logger.LogInformation("Address '{Address}' geocoded to coordinates: ({Lat}, {Lng})", 
+                        address, coords.latitude, coords.longitude);
+                        
+                    return (address, coords.latitude, coords.longitude, defaultRadius);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error geocoding address '{Address}', using default coordinates", address);
+                }
+            }
+            
+            // Fallback to default coordinates for Đà Nẵng
+            double normalizedLatitude = 16.047079; // Tọa độ trung tâm Đà Nẵng
+            double normalizedLongitude = 108.206230;
+            
+            return (address, normalizedLatitude, normalizedLongitude, defaultRadius);
         }
 
         public Task<Restaurant?> GetRestaurantByIdAsync(int id)

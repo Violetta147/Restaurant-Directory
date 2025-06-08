@@ -1709,19 +1709,18 @@ function calculateScatterPositions(count) {
     const positions = [];
     
     if (count <= 0) return positions;
-    
-    // If only one marker, position it above the center
+      // If only one marker, position it above the center
     if (count === 1) {
         positions.push({
             angle: 0,
-            leg: 100 // 100px above
+            leg: 40 // Further reduced from 60px to 40px above
         });
         return positions;
     }
     
     // Use a spiral for many points (more than 8)
     if (count > 8) {
-        let legLength = 60; // Starting length
+        let legLength = 30; // Further reduced starting length (from 40px to 30px)
         const angleStep = Math.PI * 2 / 30; // Smaller step = more tightly packed spiral
         
         // Start angle slightly offset to avoid direct vertical alignment
@@ -1735,14 +1734,14 @@ function calculateScatterPositions(count) {
                 y: legLength * Math.sin(angle)
             });
             angle += angleStep;
-            legLength += 5; // Increment length for spiral effect
+            legLength += 2; // Further reduced increment (from 3px to 2px) for tighter spiral
         }
         
         return positions;
     }
     
     // For 2-8 markers, use a circle arrangement
-    const radius = 100; // Fixed radius in pixels
+    const radius = 15;
     const angleStep = (Math.PI * 2) / count;
     
     // Start angle slightly offset to avoid direct vertical alignment
