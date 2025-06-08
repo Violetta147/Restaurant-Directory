@@ -27,9 +27,11 @@ namespace PBL3.ViewModel
         
         [Display(Name = "Kích hoạt xác thực 2 bước")]
         public bool TwoFactorEnabled { get; set; }
-        
-        [Display(Name = "Email đã được xác nhận")]
+          [Display(Name = "Email đã được xác nhận")]
         public bool IsEmailConfirmed { get; set; }
+        
+        [Display(Name = "Số lượng nhà hàng")]
+        public int RestaurantCount { get; set; }
         
         public string? StatusMessage { get; set; }
     }

@@ -246,7 +246,7 @@ function fixPaginationAfterAjax(pageNumber) {
     }, 200); // Delay to ensure DOM is updated
 }
 ```
-
+review, nhà hàng sỡ hữu
 ### Enhanced LoadPage Function
 
 ```javascript
