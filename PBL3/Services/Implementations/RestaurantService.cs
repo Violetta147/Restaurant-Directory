@@ -245,7 +245,14 @@ namespace PBL3.Services.Implementations
             return _context.CuisineTypes
                 .OrderBy(c => c.Name)
                 .ToListAsync();
-        }        /// <summary>
+        }
+
+        public async Task<int> GetRestaurantCountByOwnerIdAsync(string userId)
+        {
+            return await _context.Restaurants
+                .Where(r => r.OwnerId == userId)
+                .CountAsync();
+        }/// <summary>
         /// Chuẩn hóa địa chỉ và tọa độ với giá trị mặc định cho Đà Nẵng
         /// </summary>
         public async Task<(string address, double latitude, double longitude, double radiusInKm)> NormalizeLocationParameters(

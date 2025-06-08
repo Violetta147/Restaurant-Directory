@@ -1,5 +1,6 @@
 ﻿using PBL3.Models;
 using PBL3.ViewModel;
+using PBL3.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,30 +13,37 @@ using System.Text;
 using System.Threading.Tasks; // Cho Task
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using PBL3.Data;
+using Microsoft.EntityFrameworkCore;
+using PBL3.Services.Interfaces;
 // using Microsoft.AspNetCore.Identity.UI.Services;
 
 namespace PBL3.Controllers
-{
-    [Authorize]
-    public class AccountController : Controller
+{    [Authorize]    public class AccountController : Controller
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ILogger<AdminController> _logger;
         private readonly IEmailSender _emailSender;
         private readonly EmailHelper _emailHelper; // Thêm DI cho EmailHelper
+        private readonly IRestaurantService _restaurantService;
+        private readonly ApplicationDbContext _context; // Kept only for GetRestaurantReviews method - should be refactored to use a ReviewService
 
         public AccountController(
             UserManager<AppUser> userMgr,
             SignInManager<AppUser> signinMgr,
             IEmailSender emailSender,
             EmailHelper emailHelper,
-            ILogger<AdminController> logger = null) // Inject EmailHelper
+            IRestaurantService restaurantService,
+            ApplicationDbContext context, // Kept only for GetRestaurantReviews - should be replaced with ReviewService
+            ILogger<AdminController> logger = null) // Inject RestaurantService
         {
             _userManager = userMgr;
             _signInManager = signinMgr;
             _emailSender = emailSender; // Gán giá trị cho _emailSender
             _emailHelper = emailHelper; // Gán giá trị
+            _restaurantService = restaurantService;
+            _context = context; // Temporary - should be removed when ReviewService is implemented
             _logger = logger;
         }
 
@@ -920,6 +928,9 @@ namespace PBL3.Controllers
                 return NotFound("User not found");
             }
 
+            // Count restaurants owned by the current user using RestaurantService
+            var restaurantCount = await _restaurantService.GetRestaurantCountByOwnerIdAsync(user.Id);
+
             var model = new ManageAccountViewModel
             {
                 Id = user.Id,
@@ -930,6 +941,7 @@ namespace PBL3.Controllers
                 DateOfBirth = user.DateOfBirth,
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 IsEmailConfirmed = user.EmailConfirmed,
+                RestaurantCount = restaurantCount,
                 StatusMessage = TempData["StatusMessage"]?.ToString()
             };
 
@@ -986,10 +998,87 @@ namespace PBL3.Controllers
                     model.IsEmailConfirmed = user.EmailConfirmed;
                     return View(model);
                 }
+            }            TempData["StatusMessage"] = "Thông tin tài khoản đã được cập nhật thành công.";
+            return RedirectToAction(nameof(Manage));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // Return JSON for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Dữ liệu không hợp lệ" });
+                }
+                TempData["StatusMessage"] = "Lỗi: Dữ liệu không hợp lệ";
+                return RedirectToAction(nameof(Manage));
             }
 
-            TempData["StatusMessage"] = "Thông tin tài khoản đã được cập nhật thành công.";
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Không tìm thấy người dùng" });
+                }
+                return NotFound("User not found");
+            }
+
+            var changePasswordResult = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            if (!changePasswordResult.Succeeded)
+            {
+                var errorMessage = string.Join(", ", changePasswordResult.Errors.Select(e => e.Description));
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = errorMessage });
+                }
+                TempData["StatusMessage"] = $"Lỗi: {errorMessage}";
+                return RedirectToAction(nameof(Manage));
+            }
+
+            await _signInManager.RefreshSignInAsync(user);
+            
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = true, message = "Mật khẩu đã được thay đổi thành công!" });
+            }
+            
+            TempData["StatusMessage"] = "Mật khẩu đã được thay đổi thành công!";
             return RedirectToAction(nameof(Manage));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetRestaurantReviews()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy người dùng" });
+            }
+
+            // Get reviews for restaurants owned by the current user
+            var reviews = await _context.Reviews
+                .Include(r => r.User)
+                .Include(r => r.Restaurant)
+                .Include(r => r.Photos)
+                .Where(r => r.Restaurant.OwnerId == user.Id)
+                .OrderByDescending(r => r.ReviewDate)
+                .Select(r => new
+                {
+                    Id = r.Id,
+                    RestaurantName = r.Restaurant.Name,
+                    UserName = r.User.UserName,
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    ReviewDate = r.ReviewDate.ToString("dd/MM/yyyy HH:mm"),
+                    Photos = r.Photos.Select(p => new { Url = p.Url }).ToList()
+                })
+                .ToListAsync();
+
+            return PartialView("_RestaurantReviewsPartial", reviews);
         }
 
         [HttpPost]

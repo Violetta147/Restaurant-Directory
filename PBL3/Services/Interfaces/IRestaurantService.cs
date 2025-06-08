@@ -68,12 +68,18 @@ namespace PBL3.Services.Interfaces
 
         // Có thể thêm các phương thức quản lý chi tiết hơn (ví dụ: thêm/xóa tag cho nhà hàng, thêm/xóa loại hình ẩm thực...)
         // Task<bool> AddCuisineTypeToRestaurantAsync(int restaurantId, int cuisineTypeId);
-        // Task<bool> RemoveCuisineTypeFromRestaurantAsync(int restaurantId, int cuisineTypeId);
-        /// <summary>
+        // Task<bool> RemoveCuisineTypeFromRestaurantAsync(int restaurantId, int cuisineTypeId);        /// <summary>
         /// Gets all cuisine types ordered by name
         /// </summary>
         /// <returns>A list of cuisine types</returns>
         Task<List<CuisineType>> GetAllCuisineTypesAsync();
+
+        /// <summary>
+        /// Counts the number of restaurants owned by a specific user
+        /// </summary>
+        /// <param name="userId">The ID of the user/owner</param>
+        /// <returns>The count of restaurants owned by the user</returns>
+        Task<int> GetRestaurantCountByOwnerIdAsync(string userId);
     }
 }
 
