@@ -23,7 +23,9 @@ namespace PBL3.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ILogger<AdminController> _logger;
         private readonly IEmailSender _emailSender;
-        private readonly EmailHelper _emailHelper; // Thêm DI cho EmailHelper        public AccountController(
+        private readonly EmailHelper _emailHelper; // Thêm DI cho EmailHelper
+
+        public AccountController(
             UserManager<AppUser> userMgr,
             SignInManager<AppUser> signinMgr,
             IEmailSender emailSender,
@@ -32,7 +34,7 @@ namespace PBL3.Controllers
         {
             _userManager = userMgr;
             _signInManager = signinMgr;
-            _emailSender = emailSender; // Fix: Assign emailSender parameter
+            _emailSender = emailSender; // Gán giá trị cho _emailSender
             _emailHelper = emailHelper; // Gán giá trị
             _logger = logger;
         }
@@ -885,7 +887,7 @@ namespace PBL3.Controllers
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                     var callbackUrl = Url.Action("ConfirmEmail", "Account",
                                     values: new { userId = user.Id, code = code, returnUrl = model.ReturnUrl },
-                    protocol: Request.Scheme);                    bool emailSent = await _emailSender.SendEmailConfirmationAsync(model.Email,
+                    protocol: Request.Scheme);                    bool emailSent = await _emailHelper.SendEmailConfirmationAsync(model.Email,
                         $"Vui lòng xác nhận tài khoản FishLoot của bạn bằng cách <a href='{HtmlEncoder.Default.Encode(callbackUrl ?? "")}'>nhấn vào đây</a>.");
 
                     if (!emailSent) { /* Xử lý lỗi gửi email nếu cần */ }
