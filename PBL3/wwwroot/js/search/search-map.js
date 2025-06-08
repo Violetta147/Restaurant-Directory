@@ -1025,12 +1025,18 @@ function checkZoomForScatterView(zoomLevel) {
             console.log('Found unclustered features:', unclusteredFeatures.length);
             console.log('Found clustered features:', clusteredFeatures.length);
             console.log('Total features to check:', allFeatures.length);
-            
-            // Only proceed if we have unclustered features to work with (clustered features don't need scattering)
+              // Only proceed if we have unclustered features to work with (clustered features don't need scattering)
             if (allFeatures.length === 0) {
                 console.log('No unclustered features found, keeping original markers visible');
                 // Ensure original markers are visible if scattered markers were previously shown
                 if (currentScatterState === 'scattered') {
+                    // Close any existing popup before transitioning back to original
+                    if (currentPopup) {
+                        console.log('Closing existing popup before showing original markers');
+                        currentPopup.remove();
+                        currentPopup = null;
+                    }
+                    
                     cleanupScatteredMarkers();
                     showOriginalMarkers();
                     currentScatterState = 'original';
@@ -1052,9 +1058,16 @@ function checkZoomForScatterView(zoomLevel) {
                     needsScattering = true;
                 }
             });
-            
-            if (needsScattering) {
+              if (needsScattering) {
                 console.log('Found groups that need scattering, transitioning to scattered state');
+                
+                // Close any existing popup before hiding original markers
+                if (currentPopup) {
+                    console.log('Closing existing popup before scattering');
+                    currentPopup.remove();
+                    currentPopup = null;
+                }
+                
                 // Only hide original markers if we actually need to scatter
                 hideOriginalMarkers();
                 currentScatterState = 'scattered';
@@ -1067,27 +1080,45 @@ function checkZoomForScatterView(zoomLevel) {
                     } else {
                         console.log(`Group ${groupIndex + 1} has only 1 marker, skipping scatter`);
                     }
-                });
-            } else {
+                });            } else {
                 console.log('No groups need scattering, keeping original markers visible');
                 // Clean up any existing scattered markers and show originals
                 if (currentScatterState === 'scattered') {
+                    // Close any existing popup before transitioning back to original
+                    if (currentPopup) {
+                        console.log('Closing existing popup before showing original markers');
+                        currentPopup.remove();
+                        currentPopup = null;
+                    }
+                    
                     cleanupScatteredMarkers();
                     showOriginalMarkers();
                     currentScatterState = 'original';
                 }
-            }
-        } else {
+            }} else {
             console.log('Zoom level < 15, transitioning to original state');
             if (currentScatterState === 'scattered') {
+                // Close any existing popup before transitioning back to original
+                if (currentPopup) {
+                    console.log('Closing existing popup before showing original markers');
+                    currentPopup.remove();
+                    currentPopup = null;
+                }
+                
                 cleanupScatteredMarkers();
                 showOriginalMarkers();
                 currentScatterState = 'original';
             }
-        }
-    } catch (error) {
+        }    } catch (error) {
         console.error('Error in checkZoomForScatterView:', error);
         // In case of error, ensure original markers are shown and scattered markers are cleaned up
+        // Close any existing popup to prevent stale popups
+        if (currentPopup) {
+            console.log('Closing existing popup due to error in checkZoomForScatterView');
+            currentPopup.remove();
+            currentPopup = null;
+        }
+        
         cleanupScatteredMarkers();
         showOriginalMarkers();
         currentScatterState = 'original';

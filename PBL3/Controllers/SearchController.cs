@@ -23,7 +23,7 @@ namespace PBL3.Controllers
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _restaurantService = restaurantService ?? throw new ArgumentNullException(nameof(restaurantService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }public async Task<IActionResult> Index(string searchTerm = "", string Address = "", int page = 1, int pageSize = 8, IEnumerable<int>? tagIds = null, IEnumerable<int>? cuisineTypeIds = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string maxDistance = "")
+        }public async Task<IActionResult> Index(string searchTerm = "", string Address = "", int page = 1, int pageSize = 10, IEnumerable<int>? tagIds = null, IEnumerable<int>? cuisineTypeIds = null, string? sortBy = null, decimal? minPrice = null, decimal? maxPrice = null, string maxDistance = "")
         {            //Mapbox token
             ViewBag.MapboxToken = _config["Mapbox:AccessToken"];
             ViewBag.CuisineTypes = await _restaurantService.GetAllCuisineTypesAsync();
