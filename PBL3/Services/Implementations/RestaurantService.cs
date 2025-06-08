@@ -135,12 +135,12 @@ namespace PBL3.Services.Implementations
             // Apply price filters
             if (minPrice.HasValue)
             {
-                query = query.Where(r => r.MinTypicalPrice >= minPrice.Value);
+                query = query.Where(r => r.MaxTypicalPrice >= minPrice.Value);
             }
-
+            
             if (maxPrice.HasValue)
             {
-                query = query.Where(r => r.MaxTypicalPrice <= maxPrice.Value);
+                query = query.Where(r => r.MinTypicalPrice <= maxPrice.Value);
             }
 
             // Apply sorting 
