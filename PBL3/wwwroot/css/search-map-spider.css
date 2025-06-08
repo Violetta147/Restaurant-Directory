@@ -22,21 +22,19 @@
     margin-top: -1px;
 }
 
-/* Increase z-index for popups to appear above all markers */
+/* Style for popups to appear above markers (z-index handled by z-index-fix.css) */
 .mapboxgl-popup.spider-popup {
-    z-index: 999 !important;
+    backdrop-filter: blur(0.5px);
 }
 
-/* Ensure ALL popups appear above markers and spider legs */
+/* Ensure ALL popups have proper styling (z-index handled by z-index-fix.css) */
 .mapboxgl-popup {
-    z-index: 1000 !important;
     /* Add a subtle backdrop filter for better readability */
     backdrop-filter: blur(0.5px);
 }
 
-/* Make sure popup content is also elevated */
+/* Make sure popup content looks good (z-index handled by z-index-fix.css) */
 .mapboxgl-popup-content {
-    z-index: 1001 !important;
     position: relative !important;
     /* Enhanced shadow for better separation from background */
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
@@ -48,14 +46,8 @@
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Ensure popup tips/arrows are also elevated */
-.mapboxgl-popup-tip {
-    z-index: 1002 !important;
-}
-
-/* Ensure popup close button is also elevated */
+/* Style popup close button */
 .mapboxgl-popup-close-button {
-    z-index: 1003 !important;
     position: relative !important;
     /* Ensure it's clickable */
     pointer-events: auto !important;
@@ -63,12 +55,10 @@
 
 /* Make sure the spiderified legs are visible */
 .mapboxgl-canvas-container .spidered-marker-container {
-    z-index: 300 !important;
     display: block !important; /* Ensure visibility */
 }
 
 .spider-leg-pin {
-    z-index: 400 !important;
     position: absolute !important; /* Ensure absolute positioning */
 }
 
@@ -88,7 +78,7 @@
     height: 100%;
     transform-origin: 0 0;
     border-top: 2px solid rgba(220, 53, 69, 0.8);
-    z-index: 150;
+    z-index: 1250;
     pointer-events: none;
 }
 
@@ -101,7 +91,7 @@
 /* Scattered markers styling */
 .scattered-marker {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    z-index: 400 !important;
+    z-index: 1400 !important;
     animation: popIn 0.3s ease-out forwards;
     transform-origin: center bottom;
 }

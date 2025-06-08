@@ -52,7 +52,7 @@
     border: 1px solid #7AE582;
     border-top: none;
     display: none;
-    z-index: 1000;
+    /* z-index: 2000; Higher than map elements to ensure visibility */
 }
 
 .location-dropdown.show {
