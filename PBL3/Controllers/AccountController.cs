@@ -23,9 +23,7 @@ namespace PBL3.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ILogger<AdminController> _logger;
         private readonly IEmailSender _emailSender;
-        private readonly EmailHelper _emailHelper; // Thêm DI cho EmailHelper
-
-        public AccountController(
+        private readonly EmailHelper _emailHelper; // Thêm DI cho EmailHelper        public AccountController(
             UserManager<AppUser> userMgr,
             SignInManager<AppUser> signinMgr,
             IEmailSender emailSender,
@@ -34,6 +32,7 @@ namespace PBL3.Controllers
         {
             _userManager = userMgr;
             _signInManager = signinMgr;
+            _emailSender = emailSender; // Fix: Assign emailSender parameter
             _emailHelper = emailHelper; // Gán giá trị
             _logger = logger;
         }
@@ -75,10 +74,14 @@ namespace PBL3.Controllers
                             return Json(new { success = true, redirectUrl = loginViewModel.ReturnUrl });
                         }
                         return Redirect(loginViewModel.ReturnUrl ?? Url.Content("~/")); // Fallback nếu không phải AJAX
-                    }
-                    if (result.RequiresTwoFactor)
+                    }                    if (result.RequiresTwoFactor)
                     {
-                        ModelState.AddModelError(string.Empty, "Yêu cầu xác thực hai yếu tố. Vui lòng kiểm tra email/ứng dụng của bạn.");
+                        // Chuyển hướng đến LoginTwoStep để gửi mã 2FA và xử lý
+                        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        {
+                            return Json(new { success = true, redirectUrl = Url.Action("LoginTwoStep", new { email = loginViewModel.Email, returnUrl = loginViewModel.ReturnUrl }) });
+                        }
+                        return RedirectToAction("LoginTwoStep", new { email = loginViewModel.Email, returnUrl = loginViewModel.ReturnUrl });
                     }
                     else if (result.IsLockedOut)
                     {
@@ -319,9 +322,8 @@ namespace PBL3.Controllers
             }
 
             returnUrl ??= Url.Content("~/");
-            ViewData["ReturnUrl"] = returnUrl;
-            var token = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
-            bool emailSent = await _emailHelper.SendEmailTwoFactorCodeAsync(user.Email, token);
+            ViewData["ReturnUrl"] = returnUrl;            var token = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
+            bool emailSent = await _emailHelper.SendEmailTwoFactorCodeAsync(user.Email ?? "", token);
             if (!emailSent) TempData["ErrorMessage"] = "Lỗi khi gửi mã xác thực.";
 
             return View(new TwoFactorViewModel { ReturnUrl = returnUrl ?? Url.Content("~/") });
@@ -383,10 +385,8 @@ namespace PBL3.Controllers
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token)); // Mã hóa token
-            var link = Url.Action(nameof(ResetPassword), "Account", new { token, email = user.Email }, Request.Scheme);
-
-            bool emailSent = await _emailHelper.SendEmailPasswordResetAsync(user.Email,
-                $"Vui lòng đặt lại mật khẩu của bạn bằng cách <a href='{HtmlEncoder.Default.Encode(link)}'>nhấn vào đây</a>.");
+            var link = Url.Action(nameof(ResetPassword), "Account", new { token, email = user.Email }, Request.Scheme);            bool emailSent = await _emailHelper.SendEmailPasswordResetAsync(user.Email ?? "",
+                $"Vui lòng đặt lại mật khẩu của bạn bằng cách <a href='{HtmlEncoder.Default.Encode(link ?? "")}'>nhấn vào đây</a>.");
 
             if (emailSent) return RedirectToAction(nameof(ForgotPasswordConfirmation));
 
@@ -885,10 +885,8 @@ namespace PBL3.Controllers
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                     var callbackUrl = Url.Action("ConfirmEmail", "Account",
                                     values: new { userId = user.Id, code = code, returnUrl = model.ReturnUrl },
-                    protocol: Request.Scheme);
-
-                    bool emailSent = await _emailSender.SendEmailConfirmationAsync(model.Email,
-                        $"Vui lòng xác nhận tài khoản FishLoot của bạn bằng cách <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>nhấn vào đây</a>.");
+                    protocol: Request.Scheme);                    bool emailSent = await _emailSender.SendEmailConfirmationAsync(model.Email,
+                        $"Vui lòng xác nhận tài khoản FishLoot của bạn bằng cách <a href='{HtmlEncoder.Default.Encode(callbackUrl ?? "")}'>nhấn vào đây</a>.");
 
                     if (!emailSent) { /* Xử lý lỗi gửi email nếu cần */ }
 
@@ -910,7 +908,140 @@ namespace PBL3.Controllers
                     AddErrors(createUserResult);
                 }
             }
+            return View(model);        }        // ACTION QUẢN LÝ TÀI KHOẢN
+        [HttpGet]
+        public async Task<IActionResult> Manage()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            var model = new ManageAccountViewModel
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                PhoneNumber = user.PhoneNumber,
+                Gender = user.Gender,
+                DateOfBirth = user.DateOfBirth,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                IsEmailConfirmed = user.EmailConfirmed,
+                StatusMessage = TempData["StatusMessage"]?.ToString()
+            };
+
             return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Manage(ManageAccountViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                // Reload current values if validation fails
+                model.TwoFactorEnabled = user.TwoFactorEnabled;
+                model.IsEmailConfirmed = user.EmailConfirmed;
+                return View(model);
+            }
+
+            bool hasChanges = false;
+
+            // Update basic profile information
+            if (user.PhoneNumber != model.PhoneNumber)
+            {
+                user.PhoneNumber = model.PhoneNumber;
+                hasChanges = true;
+            }
+
+            if (user.Gender != model.Gender)
+            {
+                user.Gender = model.Gender;
+                hasChanges = true;
+            }
+
+            if (user.DateOfBirth != model.DateOfBirth)
+            {
+                user.DateOfBirth = model.DateOfBirth;
+                hasChanges = true;
+            }
+
+            // Update profile if there are changes
+            if (hasChanges)
+            {
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    AddErrors(updateResult);
+                    model.TwoFactorEnabled = user.TwoFactorEnabled;
+                    model.IsEmailConfirmed = user.EmailConfirmed;
+                    return View(model);
+                }
+            }
+
+            TempData["StatusMessage"] = "Thông tin tài khoản đã được cập nhật thành công.";
+            return RedirectToAction(nameof(Manage));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnableTwoFactor()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                TempData["StatusMessage"] = "Lỗi: Bạn cần xác nhận email trước khi có thể kích hoạt xác thực 2 bước.";
+                return RedirectToAction(nameof(Manage));
+            }
+
+            var result = await _userManager.SetTwoFactorEnabledAsync(user, true);
+            if (result.Succeeded)
+            {
+                _logger?.LogInformation("User {UserId} enabled two factor authentication.", user.Id);
+                TempData["StatusMessage"] = "Xác thực 2 bước đã được kích hoạt thành công. Bạn sẽ cần nhập mã xác thực từ email khi đăng nhập.";
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Lỗi: Không thể kích hoạt xác thực 2 bước.";
+            }
+
+            return RedirectToAction(nameof(Manage));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DisableTwoFactor()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            var result = await _userManager.SetTwoFactorEnabledAsync(user, false);
+            if (result.Succeeded)
+            {
+                _logger?.LogInformation("User {UserId} disabled two factor authentication.", user.Id);
+                TempData["StatusMessage"] = "Xác thực 2 bước đã được tắt.";
+            }
+            else
+            {
+                TempData["StatusMessage"] = "Lỗi: Không thể tắt xác thực 2 bước.";
+            }
+
+            return RedirectToAction(nameof(Manage));
         }
 
         // Hàm tiện ích để thêm lỗi vào ModelState

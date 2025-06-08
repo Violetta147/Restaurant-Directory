@@ -55,7 +55,7 @@ namespace PBL3.Controllers
                     UserName = model.Name, // Hoặc model.Email nếu bạn muốn UserName là Email
                     Email = model.Email,
                     EmailConfirmed = false, // Mặc định là false, cần xác nhận
-                    TwoFactorEnabled = false // Thường thì người dùng tự bật 2FA sau khi đăng nhập
+                    TwoFactorEnabled = true // Thường thì người dùng tự bật 2FA sau khi đăng nhập
                 };
 
                 IdentityResult result = await _userManager.CreateAsync(appUser, model.Password);
